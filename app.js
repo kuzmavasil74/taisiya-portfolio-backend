@@ -1,20 +1,21 @@
-import express from 'express'
-import connectDB from './config/dbConfig.js'
-import 'dotenv/config'
-import contactRoutes from './routers/contactRoutes.js'
+const express = require('express')
+const connectDB = require('./config/db')
+const bookingRoutes = require('./routes/bookingRoutes')
+const feedbackRoutes = require('./routes/feedbackRoutes')
 
 const app = express()
 
 // Middleware
-app.use(express.json()) // Для парсингу JSON в запитах
-
-// Підключення до бази даних
-connectDB()
+app.use(express.json())
 
 // Routes
-app.use('/api', contactRoutes)
+app.use('/api/bookings', bookingRoutes)
+app.use('/api/feedbacks', feedbackRoutes)
 
-const PORT = process.env.PORT || 5001
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
+// Error Handling
+app.use((err, req, res, next) => {
+  console.error(err.message)
+  res.status(500).json({ message: 'Internal server error' })
 })
+
+module.exports = app
