@@ -1,6 +1,6 @@
-const Feedback = require('../models/Feedback')
+import Feedback from '../models/Feedback.js'
 
-exports.createFeedback = async (req, res, next) => {
+const createFeedback = async (req, res, next) => {
   try {
     const { name, email, rating, comment } = req.body
 
@@ -16,7 +16,7 @@ exports.createFeedback = async (req, res, next) => {
   }
 }
 
-exports.getFeedbacks = async (req, res, next) => {
+const getFeedbacks = async (req, res, next) => {
   try {
     const feedbacks = await Feedback.find().sort({ createdAt: -1 })
     res.status(200).json(feedbacks)
@@ -24,3 +24,4 @@ exports.getFeedbacks = async (req, res, next) => {
     next(error)
   }
 }
+export { createFeedback, getFeedbacks }

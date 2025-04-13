@@ -1,11 +1,11 @@
-const express = require('express')
-const {
+import express from 'express'
+import {
   createFeedback,
   getFeedbacks,
-} = require('../controllers/feedbackController')
+} from '../controllers/feedbackController.js'
 const router = express.Router()
 
 router.post('/', createFeedback)
 router.get('/', getFeedbacks)
 
-module.exports = router
+export default router

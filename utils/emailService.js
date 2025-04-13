@@ -1,25 +1,47 @@
-const nodemailer = require('nodemailer')
+// sendEmail.js
+import { google } from 'googleapis'
+import nodemailer from 'nodemailer'
+import dotenv from 'dotenv'
+dotenv.config()
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+// Налаштування OAuth2 клієнта
+const oAuth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+)
+
+oAuth2Client.setCredentials({
+  refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
 })
 
-exports.sendEmail = async (recipient, subject, text) => {
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: recipient,
-    subject,
-    text,
-  }
-
+const sendEmail = async (recipient, subject, text) => {
   try {
+    const accessToken = await oAuth2Client.getAccessToken()
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        type: 'OAuth2',
+        user: process.env.EMAIL_USER,
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+        accessToken: accessToken.token,
+      },
+    })
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: recipient,
+      subject,
+      text,
+    }
+
     await transporter.sendMail(mailOptions)
-    console.log('Email sent successfully')
+    console.log('📤 Email sent successfully')
   } catch (error) {
-    throw new Error('Failed to send email: ' + error.message)
+    console.error('❌ Failed to send email:', error.message)
   }
 }
+
+export default sendEmail

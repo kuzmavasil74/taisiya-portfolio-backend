@@ -1,6 +1,6 @@
-const { sendEmail } = require('../utils/emailService')
-
-exports.createBooking = async (req, res, next) => {
+import sendEmail from '../utils/emailService.js'
+import Booking from '../models/Booking.js'
+const createBooking = async (req, res, next) => {
   try {
     const { name, email, phone, date, service, comments } = req.body
 
@@ -33,3 +33,4 @@ exports.createBooking = async (req, res, next) => {
     next(error)
   }
 }
+export default createBooking

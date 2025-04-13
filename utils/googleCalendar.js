@@ -1,5 +1,4 @@
-const calendar = require('../config/googleConfig')
-
+import calendar from '../config/googleConfig.js'
 exports.createCalendarEvent = async (booking) => {
   const event = {
     summary: `Appointment: ${booking.name}`,

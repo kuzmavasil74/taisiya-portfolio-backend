@@ -1,7 +1,7 @@
-const express = require('express')
-const connectDB = require('./config/db')
-const bookingRoutes = require('./routes/bookingRoutes')
-const feedbackRoutes = require('./routes/feedbackRoutes')
+import express from 'express'
+import connectDB from './config/db.js'
+import bookingRoutes from './routers/bookingRoutes.js'
+import feedbackRoutes from './routers/feedbackRoutes.js'
 
 const app = express()
 
@@ -18,4 +18,4 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal server error' })
 })
 
-module.exports = app
+export default app
