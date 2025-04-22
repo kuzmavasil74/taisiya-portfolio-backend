@@ -1,10 +1,8 @@
-// sendEmail.js
 import { google } from 'googleapis'
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
 dotenv.config()
 
-// Налаштування OAuth2 клієнта
 const oAuth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
@@ -19,6 +17,13 @@ const sendEmail = async (recipient, subject, text) => {
   try {
     const accessToken = await oAuth2Client.getAccessToken()
 
+    console.log('accessToken:', accessToken)
+    console.log('accessToken.token:', accessToken?.token)
+
+    if (!accessToken || !accessToken.token) {
+      throw new Error('Failed to retrieve access token')
+    }
+    console.log('ACCESS TOKEN:', accessToken.token)
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -43,5 +48,5 @@ const sendEmail = async (recipient, subject, text) => {
     console.error('❌ Failed to send email:', error.message)
   }
 }
-
+sendEmail('kuzmavasil.v@gmail.com', 'Test Subject', 'This is a test email')
 export default sendEmail
