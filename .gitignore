@@ -30,3 +30,4 @@ Thumbs.db
 # NPM / Yarn package lock файли
 package-lock.json
 yarn.lock
+credentials.json
