@@ -1,33 +1,23 @@
 # Node modules
 node_modules/
 
-# Лог-файли
+# Logs
+logs/
 *.log
-
-# Вибрані файли для налагодження
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Секрети
+# Environment variables
 .env
 
-# Можливі скомпільовані файли
+# OS files
+.DS_Store
+
+# Build output
 dist/
 build/
 
-# Налаштування IDE
+# IDE / editor files
 .vscode/
 .idea/
-
-# Тестові артефакти
-coverage/
-
-# Системні файли
-.DS_Store
-Thumbs.db
-
-# NPM / Yarn package lock файли
-package-lock.json
-yarn.lock
-credentials.json
