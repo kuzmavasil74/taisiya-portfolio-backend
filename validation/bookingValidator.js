@@ -12,8 +12,20 @@ export const bookingSchema = yup.object().shape({
     .trim()
     .min(10)
     .max(15)
-    .regex(/^\d+$/),
+    .matches(/^\d+$/),
   telegram: yup.string().trim(),
   service: yup.string().required(' Service is required').trim(),
   date: yup.date().required(' Date is required'),
+})
+export const bookingUpdateSchema = yup.object().shape({
+  name: yup.string().min(2, 'Name must be at least 2 characters').trim(),
+  phone: yup
+    .string()
+    .trim()
+    .min(10, 'Phone must be at least 10 digits')
+    .max(15, 'Phone can be max 15 digits')
+    .matches(/^\d+$/, 'Phone must contain only digits'),
+  telegram: yup.string().trim(),
+  service: yup.string().trim(),
+  date: yup.date(),
 })

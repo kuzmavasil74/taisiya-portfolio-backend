@@ -4,7 +4,7 @@ import { getUsers } from '../controllers/userController.js'
 import { getUsersById } from '../controllers/userController.js'
 import { updateUser } from '../controllers/userController.js'
 import { deleteUser } from '../controllers/userController.js'
-import { validate } from '../middleware/userValidator.js'
+import { validate } from '../middleware/validate.js'
 import { userSchema } from '../validation/userValidator.js'
 import { updateSchema } from '../validation/userValidator.js'
 
