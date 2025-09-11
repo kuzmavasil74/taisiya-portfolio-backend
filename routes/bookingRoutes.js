@@ -7,12 +7,18 @@ import { deleteBooking } from '../controllers/bookingController.js'
 import { validate } from '../middleware/validate.js'
 import { bookingSchema } from '../validation/bookingValidator.js'
 import { bookingUpdateSchema } from '../validation/bookingValidator.js'
+import { validateObjectId } from '../middleware/validateObjectId.js'
 
 const router = express.Router()
 router.post('/', validate(bookingSchema), createBooking)
 router.get('/', getBooking)
-router.get('/:id', getBookingById)
-router.put('/:id', validate(bookingUpdateSchema), updateBooking)
-router.delete('/:id', deleteBooking)
+router.get('/:id', validateObjectId('id'), getBookingById)
+router.put(
+  '/:id',
+  validateObjectId('id'),
+  validate(bookingUpdateSchema),
+  updateBooking
+)
+router.delete('/:id', validateObjectId('id'), deleteBooking)
 
 export default router
