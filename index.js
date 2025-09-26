@@ -3,6 +3,8 @@ import homeRouters from './routes/homeRouters.js'
 import userRouters from './routes/userRoutes.js'
 import bookingRouters from './routes/bookingRoutes.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import authRoutes from './routes/authRoutes.js'
+
 import './config/db.js'
 
 const app = express()
@@ -10,6 +12,7 @@ app.use(express.json())
 app.use('/', homeRouters)
 app.use('/users', userRouters)
 app.use('/bookings', bookingRouters)
+app.use('/auth', authRoutes)
 
 app.use(errorHandler)
 
