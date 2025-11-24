@@ -9,7 +9,6 @@ export const createUser = async (req, res) => {
     }
 
     const user = await User.create({ name, email, password })
-    // never log password in production environment
     return res.status(201).json({
       id: user._id,
       name: user.name,
@@ -36,6 +35,11 @@ export const getUsersById = async (req, res) => {
     const user = await User.findById(req.params.id)
     if (!user) {
       return res.status(404).json({ message: 'User not found' })
+    } else if (
+      req.user.role !== 'admin' &&
+      req.user.id !== user._id.toString()
+    ) {
+      return res.status(403).json({ message: 'Forbidden' })
     }
     return res.status(200).json(user)
   } catch (err) {

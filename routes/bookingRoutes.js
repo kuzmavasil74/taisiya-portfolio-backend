@@ -8,17 +8,26 @@ import { validate } from '../middleware/validate.js'
 import { bookingSchema } from '../validation/bookingValidator.js'
 import { bookingUpdateSchema } from '../validation/bookingValidator.js'
 import { validateObjectId } from '../middleware/validateObjectId.js'
+import { auth } from '../middleware/auth.js'
+import { requireRole } from '../middleware/role.js'
 
 const router = express.Router()
-router.post('/', validate(bookingSchema), createBooking)
-router.get('/', getBooking)
-router.get('/:id', validateObjectId('id'), getBookingById)
+router.post('/', auth, validate(bookingSchema), createBooking)
+router.get('/', auth, requireRole('admin'), getBooking)
+router.get('/:id', auth, validateObjectId('id'), getBookingById)
 router.put(
   '/:id',
+  auth,
   validateObjectId('id'),
   validate(bookingUpdateSchema),
   updateBooking
 )
-router.delete('/:id', validateObjectId('id'), deleteBooking)
+router.delete(
+  '/:id',
+  auth,
+  requireRole('admin'),
+  validateObjectId('id'),
+  deleteBooking
+)
 
 export default router

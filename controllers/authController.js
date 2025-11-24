@@ -8,6 +8,7 @@ dotenv.config()
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body
+    const role = req.body.role || 'user'
     if (!name || !email || !password) {
       return res
         .status(400)
@@ -21,11 +22,22 @@ export const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
-    const user = await User.create({ name, email, password: hashedPassword })
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+    })
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES || '1d' }
+    )
     return res.status(201).json({
       id: user._id,
       name: user.name,
       email: user.email,
+      role: user.role,
       createdAt: user.createdAt,
     })
   } catch (err) {
@@ -50,7 +62,7 @@ export const login = async (req, res) => {
     const payload = {
       id: user._id,
       email: user.email,
-      role: user.role ?? 'user',
+      role: user.role,
     }
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES || '1d',
@@ -62,7 +74,7 @@ export const login = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: payload.role,
+        role: user.role,
       },
     })
   } catch (err) {

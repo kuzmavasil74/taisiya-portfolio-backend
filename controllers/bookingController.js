@@ -3,18 +3,22 @@ import Booking from '../models/Booking.js'
 export const createBooking = async (req, res) => {
   try {
     const { name, phone, telegram, service, date } = req.body
+
     const booking = await Booking.create({
       name,
       phone,
       telegram,
       service,
       date,
+      userId: req.user.id,
     })
+
     return res.status(201).json(booking)
   } catch (err) {
     return res.status(500).json({ message: 'Server error' })
   }
 }
+
 export const getBooking = async (req, res) => {
   try {
     const booking = await Booking.find()
@@ -29,6 +33,12 @@ export const getBookingById = async (req, res) => {
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' })
     }
+    if (
+      req.user.role !== 'admin' &&
+      booking.userId.toString() !== req.user.id
+    ) {
+      return res.status(403).json({ message: 'Forbidden' })
+    }
     return res.status(200).json(booking)
   } catch (err) {
     return res.status(500).json({ message: 'Server error' })
@@ -40,6 +50,12 @@ export const updateBooking = async (req, res) => {
     const booking = await Booking.findById(req.params.id)
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' })
+    }
+    if (
+      req.user.role !== 'admin' &&
+      booking.userId.toString() !== req.user.id
+    ) {
+      return res.status(403).json({ message: 'Forbidden' })
     }
     const { name, phone, telegram, service, date } = req.body
     if (name) {
@@ -69,6 +85,12 @@ export const deleteBooking = async (req, res) => {
     const booking = await Booking.findById(req.params.id)
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' })
+    }
+    if (
+      req.user.role !== 'admin' &&
+      booking.userId.toString() !== req.user.id
+    ) {
+      return res.status(403).json({ message: 'Forbidden' })
     }
     await Booking.findByIdAndDelete(req.params.id)
     return res.status(200).json({ message: 'Booking deleted' })
