@@ -6,10 +6,15 @@ import { errorHandler } from './middleware/errorHandler.js'
 import authRoutes from './routes/authRoutes.js'
 import './config/db.js'
 import dotenv from 'dotenv'
+import morgan from 'morgan'
+import cors from 'cors'
+
 dotenv.config()
 
 const app = express()
 app.use(express.json())
+app.use(morgan('dev'))
+app.use(cors())
 app.use('/', homeRouters)
 app.use('/users', userRouters)
 app.use('/bookings', bookingRouters)
