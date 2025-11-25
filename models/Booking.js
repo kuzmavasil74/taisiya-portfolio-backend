@@ -7,6 +7,11 @@ const bookingSchema = new mongoose.Schema(
     telegram: { type: String, trim: true },
     service: { type: String, required: true, trim: true },
     date: { type: Date, required: true },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
   },
   { timestamps: true }
 )
