@@ -81,6 +81,7 @@ export const updateBooking = async (req, res) => {
 }
 
 export const deleteBooking = async (req, res) => {
+  console.log('IN CONTROLLER')
   try {
     const booking = await Booking.findById(req.params.id)
     if (!booking) {

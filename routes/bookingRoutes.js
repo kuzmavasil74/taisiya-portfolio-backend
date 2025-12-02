@@ -22,12 +22,6 @@ router.put(
   validate(bookingUpdateSchema),
   updateBooking
 )
-router.delete(
-  '/:id',
-  auth,
-  requireRole('admin'),
-  validateObjectId('id'),
-  deleteBooking
-)
+router.delete('/:id', auth, validateObjectId('id'), deleteBooking)
 
 export default router
