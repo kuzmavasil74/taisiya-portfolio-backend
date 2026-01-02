@@ -4,6 +4,8 @@ import User from '../models/User.js'
 dotenv.config()
 
 export const auth = (req, res, next) => {
+  if (req.method === 'OPTIONS') return next()
+
   const header = req.headers.authorization
   if (!header || !header.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'No token provided' })
