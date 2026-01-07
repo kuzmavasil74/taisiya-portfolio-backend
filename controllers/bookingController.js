@@ -28,7 +28,7 @@ export const getBooking = async (req, res) => {
     let bookings
 
     if (req.user.role === 'admin') {
-      bookings = await Booking.find()
+      bookings = await Booking.find().populate('userId')
     } else {
       console.log(req.user, typeof req.user.id)
       bookings = await Booking.find({
