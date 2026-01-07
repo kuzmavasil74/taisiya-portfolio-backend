@@ -14,7 +14,11 @@ export const auth = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     console.log('USER FROM TOKEN:', decoded)
-    req.user = decoded
+    req.user = {
+      id: decoded.id || decoded._id,
+      email: decoded.email,
+      role: decoded.role,
+    }
     next()
   } catch (err) {
     console.error('❌ JWT verification error:', err.message)

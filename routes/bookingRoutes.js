@@ -13,7 +13,7 @@ import { requireRole } from '../middleware/role.js'
 
 const router = express.Router()
 router.post('/', auth, validate(bookingSchema), createBooking)
-router.get('/', auth, requireRole('admin'), getBooking)
+router.get('/', auth, getBooking)
 router.get('/:id', auth, validateObjectId('id'), getBookingById)
 router.put(
   '/:id',
