@@ -1,5 +1,8 @@
 import express from 'express'
-import { createBooking } from '../controllers/bookingController.js'
+import {
+  createBooking,
+  getBookingPaginated,
+} from '../controllers/bookingController.js'
 import { getBooking } from '../controllers/bookingController.js'
 import { getBookingById } from '../controllers/bookingController.js'
 import { updateBooking } from '../controllers/bookingController.js'
@@ -13,7 +16,8 @@ import { requireRole } from '../middleware/role.js'
 
 const router = express.Router()
 router.post('/', auth, validate(bookingSchema), createBooking)
-router.get('/', auth, getBooking)
+router.get('/all', auth, getBooking)
+router.get('/', auth, requireRole('admin'), getBookingPaginated)
 router.get('/:id', auth, validateObjectId('id'), getBookingById)
 router.put(
   '/:id',

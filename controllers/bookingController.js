@@ -111,3 +111,38 @@ export const deleteBooking = async (req, res) => {
     return res.status(500).json({ message: 'Server error' })
   }
 }
+export const getBookingPaginated = async (req, res) => {
+  try {
+    const page = Number(req.query.page) || 1
+    const limit = Number(req.query.limit) || 6
+    const skip = (page - 1) * limit
+    const today = new Date()
+
+    // статус можна передавати: 'upcoming' або 'archive'
+    const status = req.query.status || 'all'
+
+    let filter = {}
+    if (status === 'upcoming') {
+      filter.date = { $gte: today }
+    } else if (status === 'archive') {
+      filter.date = { $lt: today }
+    }
+
+    const bookings = await Booking.find(filter)
+      .sort({ date: status === 'upcoming' ? 1 : -1 }) // сортуємо по даті
+      .skip(skip)
+      .limit(limit)
+
+    const total = await Booking.countDocuments(filter)
+
+    res.json({
+      data: bookings,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    })
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' })
+  }
+}

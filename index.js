@@ -3,6 +3,7 @@ import homeRouters from './routes/homeRouters.js'
 import userRouters from './routes/userRoutes.js'
 import bookingRouters from './routes/bookingRoutes.js'
 import authRoutes from './routes/authRoutes.js'
+import adminRoutes from './routes/adminRouters.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import './config/db.js'
 import dotenv from 'dotenv'
@@ -31,7 +32,7 @@ app.use('/', homeRouters)
 // Protected route
 app.use('/users', userRouters)
 app.use('/bookings', bookingRouters)
-
+app.use('/admin', adminRoutes)
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 4000
