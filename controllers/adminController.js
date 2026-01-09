@@ -52,7 +52,7 @@ export const getAdminStats = async (req, res) => {
       { $limit: 3 },
     ])
 
-    // 5️⃣ Фінанси (якщо у Booking є поле price)
+    // 5️⃣ Фінанси (якщо у Booking є поле price) 
     const revenueTotal = await Booking.aggregate([
       { $group: { _id: null, total: { $sum: '$price' } } },
     ])
