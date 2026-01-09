@@ -1,18 +1,59 @@
 import mongoose from 'mongoose'
 import Booking from '../models/Booking.js'
 
+const WORK_START = 9
+const WORK_END = 17
+const SLOT_INTERVAL = 30
+const SERVICE_DURATIONS = {
+  haircuts: 45,
+  menHaircuts: 30,
+  keratin: 90,
+  hotBotox: 60,
+  coldRestoration: 90,
+  coldBotox: 60,
+  polishing: 30,
+}
+
 // CREATE BOOKING
 export const createBooking = async (req, res) => {
   try {
-    const { name, phone, telegram, service, date } = req.body
+    console.log('REQ BODY:', req.body)
+    const { name, phone, telegram, service, date, duration } = req.body
+
+    if (!name || !phone || !service || !date || !duration) {
+      return res
+        .status(400)
+        .json({ message: 'All required fields must be filled' })
+    }
+
+    const bookingDate = new Date(date)
+    const bookingEnd = new Date(bookingDate.getTime() + duration * 60000)
+
+    // Перевірка на накладку
+    const existing = await Booking.find({
+      service,
+      date: {
+        $lt: bookingEnd,
+      },
+    })
+
+    const conflict = existing.some((b) => {
+      const bStart = new Date(b.date)
+      const bEnd = new Date(bStart.getTime() + b.duration * 60000)
+      return bookingDate < bEnd && bookingEnd > bStart
+    })
+
+    if (conflict)
+      return res.status(400).json({ message: 'This slot is already booked' })
 
     const booking = await Booking.create({
       name,
       phone,
       telegram,
       service,
-      date,
-      userId: new mongoose.Types.ObjectId(req.user.id),
+      date: new Date(date),
+      duration,
+      userId: null, // оскільки запис може робити будь-хто
     })
 
     return res.status(201).json(booking)
@@ -143,6 +184,59 @@ export const getBookingPaginated = async (req, res) => {
       totalPages: Math.ceil(total / limit),
     })
   } catch (error) {
+    res.status(500).json({ message: 'Server error' })
+  }
+}
+// GET AVAILABLE SLOTS
+export const getAvailableSlots = async (req, res) => {
+  try {
+    const { service, date, startHour = 9, endHour = 18 } = req.query
+
+    if (!service || !date) {
+      return res.status(400).json({ message: 'Service and date are required' })
+    }
+
+    const dayStart = new Date(`${date}T00:00:00`)
+    const dayEnd = new Date(`${date}T23:59:59`)
+
+    const bookings = await Booking.find({
+      service,
+      date: { $gte: dayStart, $lte: dayEnd },
+    })
+
+    const serviceDurations = {
+      haircuts: 45,
+      menHaircuts: 30,
+      keratin: 90,
+      hotBotox: 60,
+      coldRestoration: 90,
+      coldBotox: 60,
+      polishing: 30,
+    }
+
+    const duration = serviceDurations[service] || 60
+    const slots = []
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      const slotStart = new Date(
+        `${date}T${hour.toString().padStart(2, '0')}:00:00`
+      )
+      const slotEnd = new Date(slotStart.getTime() + duration * 60000)
+
+      const conflict = bookings.some((b) => {
+        const bStart = new Date(b.date)
+        const bEnd = new Date(bStart.getTime() + b.duration * 60000)
+        return slotStart < bEnd && slotEnd > bStart
+      })
+
+      if (!conflict) {
+        slots.push(`${hour.toString().padStart(2, '0')}:00`)
+      }
+    }
+
+    res.json(slots)
+  } catch (err) {
+    console.error(err)
     res.status(500).json({ message: 'Server error' })
   }
 }

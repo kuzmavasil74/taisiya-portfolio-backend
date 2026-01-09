@@ -6,11 +6,12 @@ const bookingSchema = new mongoose.Schema(
     phone: { type: String, required: true, trim: true },
     telegram: { type: String, trim: true },
     service: { type: String, required: true, trim: true },
-    date: { type: Date, required: true },
+    date: { type: Date, required: true }, // початок бронювання
+    duration: { type: Number, required: true }, // тривалість послуги у хвилинах
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
     },
   },
   { timestamps: true }
