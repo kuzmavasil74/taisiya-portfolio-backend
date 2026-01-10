@@ -17,7 +17,6 @@ const SERVICE_DURATIONS = {
 // CREATE BOOKING
 export const createBooking = async (req, res) => {
   try {
-    console.log('REQ BODY:', req.body)
     const { name, phone, telegram, service, date, duration } = req.body
 
     if (!name || !phone || !service || !date || !duration) {
@@ -26,34 +25,33 @@ export const createBooking = async (req, res) => {
         .json({ message: 'All required fields must be filled' })
     }
 
-    const bookingDate = new Date(date)
-    const bookingEnd = new Date(bookingDate.getTime() + duration * 60000)
+    const bookingStart = new Date(date)
+    const bookingEnd = new Date(bookingStart.getTime() + duration * 60000)
 
-    // Перевірка на накладку
+    // Перевірка накладки
     const existing = await Booking.find({
       service,
-      date: {
-        $lt: bookingEnd,
-      },
+      date: { $lt: bookingEnd },
     })
 
     const conflict = existing.some((b) => {
       const bStart = new Date(b.date)
       const bEnd = new Date(bStart.getTime() + b.duration * 60000)
-      return bookingDate < bEnd && bookingEnd > bStart
+      return bookingStart < bEnd && bookingEnd > bStart
     })
 
-    if (conflict)
+    if (conflict) {
       return res.status(400).json({ message: 'This slot is already booked' })
+    }
 
     const booking = await Booking.create({
       name,
       phone,
       telegram,
       service,
-      date: new Date(date),
+      date: bookingStart,
       duration,
-      userId: null, // оскільки запис може робити будь-хто
+      userId: null,
     })
 
     return res.status(201).json(booking)
@@ -152,6 +150,7 @@ export const deleteBooking = async (req, res) => {
     return res.status(500).json({ message: 'Server error' })
   }
 }
+// GET AVAILABLE SLOTS (simplified 30-min slots)
 export const getBookingPaginated = async (req, res) => {
   try {
     const page = Number(req.query.page) || 1
@@ -187,40 +186,45 @@ export const getBookingPaginated = async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 }
-// GET AVAILABLE SLOTS
+// GET AVAILABLE SLOTS (30-min slots)
 export const getAvailableSlots = async (req, res) => {
   try {
-    const { service, date, startHour = 9, endHour = 18 } = req.query
+    const { date, startHour = 9, endHour = 18 } = req.query
 
-    if (!service || !date) {
-      return res.status(400).json({ message: 'Service and date are required' })
+    if (!date) {
+      return res.status(400).json({ message: 'Date is required' })
     }
 
     const dayStart = new Date(`${date}T00:00:00`)
     const dayEnd = new Date(`${date}T23:59:59`)
 
     const bookings = await Booking.find({
-      service,
       date: { $gte: dayStart, $lte: dayEnd },
     })
 
-    const duration = SERVICE_DURATIONS[service] || 60
     const slots = []
 
     for (let hour = startHour; hour < endHour; hour++) {
-      const slotStart = new Date(
-        `${date}T${hour.toString().padStart(2, '0')}:00:00`
-      )
-      const slotEnd = new Date(slotStart.getTime() + duration * 60000)
+      for (let min = 0; min < 60; min += 30) {
+        const slotStart = new Date(
+          `${date}T${hour.toString().padStart(2, '0')}:${min
+            .toString()
+            .padStart(2, '0')}:00`
+        )
+        const slotEnd = new Date(slotStart.getTime() + 30 * 60000)
 
-      const conflict = bookings.some((b) => {
-        const bStart = new Date(b.date)
-        const bEnd = new Date(bStart.getTime() + b.duration * 60000)
-        return slotStart < bEnd && slotEnd > bStart
-      })
+        const conflict = bookings.some((b) => {
+          const bStart = new Date(b.date)
+          const bEnd = new Date(bStart.getTime() + b.duration * 60000)
+          return slotStart < bEnd && slotEnd > bStart
+        })
 
-      if (!conflict) {
-        slots.push(`${hour.toString().padStart(2, '0')}:00`)
+        slots.push({
+          time: `${hour.toString().padStart(2, '0')}:${min
+            .toString()
+            .padStart(2, '0')}`,
+          available: !conflict,
+        })
       }
     }
 
