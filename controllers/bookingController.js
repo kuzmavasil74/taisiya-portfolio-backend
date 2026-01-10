@@ -5,7 +5,7 @@ const WORK_START = 9
 const WORK_END = 17
 const SLOT_INTERVAL = 30
 const SERVICE_DURATIONS = {
-  haircuts: 45,
+  haircuts: 60,
   menHaircuts: 30,
   keratin: 90,
   hotBotox: 60,
@@ -204,17 +204,7 @@ export const getAvailableSlots = async (req, res) => {
       date: { $gte: dayStart, $lte: dayEnd },
     })
 
-    const serviceDurations = {
-      haircuts: 45,
-      menHaircuts: 30,
-      keratin: 90,
-      hotBotox: 60,
-      coldRestoration: 90,
-      coldBotox: 60,
-      polishing: 30,
-    }
-
-    const duration = serviceDurations[service] || 60
+    const duration = SERVICE_DURATIONS[service] || 60
     const slots = []
 
     for (let hour = startHour; hour < endHour; hour++) {
