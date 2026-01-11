@@ -4,6 +4,8 @@ import User from '../models/User.js'
 dotenv.config()
 
 export const auth = (req, res, next) => {
+  console.log('AUTH MIDDLEWARE')
+  console.log(req.method)
   if (req.method === 'OPTIONS') return next()
 
   const header = req.headers.authorization

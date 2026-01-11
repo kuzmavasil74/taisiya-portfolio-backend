@@ -24,6 +24,13 @@ router.get('/:id', auth, validateObjectId('id'), getBookingById)
 router.put(
   '/:id',
   auth,
+  (req, res, next) => {
+    console.log('AFTER AUTH, BEFORE ObjectId Validate')
+    console.log('Params:', req.params) // має показати { id: '695f847eef19ae7fc0ce04d5' }
+    console.log('Body:', req.body) // має показати { status: 'confirmed' }
+    console.log('User:', req.user) // має показати дані користувача з токену
+    next()
+  },
   validateObjectId('id'),
   validate(bookingUpdateSchema),
   updateBooking

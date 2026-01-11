@@ -104,29 +104,50 @@ export const getBookingById = async (req, res) => {
 
 // UPDATE BOOKING
 export const updateBooking = async (req, res) => {
+  console.log('=== UPDATE BOOKING ===')
+  console.log('Params ID:', req.params.id)
+  console.log('Request body:', req.body)
+  console.log('User from token:', req.user)
+
   try {
     const booking = await Booking.findById(req.params.id)
-    if (!booking) return res.status(404).json({ message: 'Booking not found' })
+    console.log('Booking found:', booking)
 
+    if (!booking) {
+      console.log('Booking not found:', req.params.id)
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+
+    // Перевірка прав доступу
     if (
       req.user.role !== 'admin' &&
+      booking.userId && // якщо є userId
       booking.userId.toString() !== req.user.id
     ) {
+      console.log('Forbidden access for user:', req.user.id)
       return res.status(403).json({ message: 'Forbidden' })
     }
 
-    const { name, phone, telegram, service, date } = req.body
+    const { name, phone, telegram, service, date, status } = req.body
+
     if (name) booking.name = name
     if (phone) booking.phone = phone
     if (telegram) booking.telegram = telegram
     if (service) booking.service = service
     if (date) booking.date = date
+    if (status && ['pending', 'confirmed', 'canceled'].includes(status)) {
+      booking.status = status
+    }
+
+    console.log('Booking before save:', booking)
 
     await booking.save()
+    console.log('Booking updated successfully:', booking._id, booking.status)
+
     return res.status(200).json(booking)
   } catch (err) {
-    console.error(err)
-    return res.status(500).json({ message: 'Server error' })
+    console.error('Server error in updateBooking:', err)
+    return res.status(500).json({ message: 'Server error', error: err.message })
   }
 }
 

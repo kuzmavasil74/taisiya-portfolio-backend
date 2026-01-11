@@ -21,7 +21,6 @@ export const bookingUpdateSchema = yup.object().shape({
   name: yup.string().min(2, 'Name must be at least 2 characters').trim(),
   phone: yup
     .string()
-    .required('Phone is required')
     .trim()
     .min(10, 'Phone must be at least 10 digits')
     .max(15, 'Phone must be at most 15 digits')
@@ -29,4 +28,5 @@ export const bookingUpdateSchema = yup.object().shape({
   telegram: yup.string().trim(),
   service: yup.string().trim(),
   date: yup.date(),
+  status: yup.string().trim().oneOf(['pending', 'confirmed', 'canceled']),
 })
