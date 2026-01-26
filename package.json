@@ -23,17 +23,14 @@
     "morgan": "1.10.1",
     "yup": "1.7.0",
     "debug": "4.3.4",
-    "qs": "6.11.1",
+    "qs": "6.10.3",
     "get-intrinsic": "1.1.1",
     "side-channel": "1.0.4"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "3.1.10"
   },
   "engines": {
-    "node": "18.x"
-  },
-  "resolutions": {
-    "debug": "4.3.4"
+    "node": "20.x"
   }
 }
