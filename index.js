@@ -3,11 +3,11 @@ import dotenv from 'dotenv'
 import morgan from 'morgan'
 import cors from 'cors'
 
-import homeRouters from './routes/homeRouters.js'
-import userRouters from './routes/userRouters.js'
-import bookingRouters from './routes/bookingRouters.js'
-import authRouters from './routes/authRouters.js'
-import adminRouters from './routes/adminRouters.js'
+import homeRoutes from './routes/homeRoutes.js'
+import userRoutes from './routes/userRoutes.js'
+import bookingRoutes from './routes/bookingRoutes.js'
+import authRoutes from './routes/authRoutes.js'
+import adminRoutes from './routes/adminRoutes.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import './config/db.js'
 
@@ -27,13 +27,13 @@ app.use(
 app.use(express.json())
 app.use(morgan('dev'))
 // Public route
-app.use('/auth', authRouters)
-app.use('/', homeRouters)
+app.use('/auth', authRoutes)
+app.use('/', homeRoutes)
 
 // Protected route
-app.use('/users', userRouters)
-app.use('/bookings', bookingRouters)
-app.use('/admin', adminRouters)
+app.use('/users', userRoutes)
+app.use('/bookings', bookingRoutes)
+app.use('/admin', adminRoutes)
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 4000
