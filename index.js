@@ -17,7 +17,11 @@ const app = express()
 // CORS middleware
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'http://[::1]:3000'],
+    origin: [
+      'https://www.taisiiastyle.cz',
+      'http://localhost:3000',
+      'http://localhost:4000',
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -38,5 +42,5 @@ app.use(errorHandler)
 
 const PORT = process.env.PORT || 4000
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`)
+  console.log(`Server running on port ${PORT}`)
 })
