@@ -22,7 +22,7 @@ export const bookingUpdateSchema = yup.object().shape({
   phone: yup
     .string()
     .trim()
-    .min(10, 'Phone must be at least 10 digits')
+    .min(9, 'Phone must be at least 10 digits')
     .max(15, 'Phone must be at most 15 digits')
     .matches(/^\d+$/, 'Phone must contain only digits'),
   telegram: yup.string().trim(),
