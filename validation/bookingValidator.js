@@ -10,7 +10,7 @@ export const bookingSchema = yup.object().shape({
     .string()
     .required(' Phone is required')
     .trim()
-    .min(10)
+    .min(9)
     .max(15)
     .matches(/^\d+$/),
   telegram: yup.string().trim(),
@@ -22,7 +22,7 @@ export const bookingUpdateSchema = yup.object().shape({
   phone: yup
     .string()
     .trim()
-    .min(9, 'Phone must be at least 10 digits')
+    .min(9, 'Phone must be at least 9 digits')
     .max(15, 'Phone must be at most 15 digits')
     .matches(/^\d+$/, 'Phone must contain only digits'),
   telegram: yup.string().trim(),
