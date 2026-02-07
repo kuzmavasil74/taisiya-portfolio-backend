@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import Booking from '../models/Booking.js'
+import { DateTime, Interval } from 'luxon'
 
 const WORK_START = 9
 const WORK_END = 17
@@ -177,20 +178,26 @@ export const getBookingPaginated = async (req, res) => {
     const page = Number(req.query.page) || 1
     const limit = Number(req.query.limit) || 6
     const skip = (page - 1) * limit
-    const today = new Date()
+
+    // Локальна зона Прази
+    const tz = 'Europe/Prague'
+    const now = DateTime.now().setZone(tz)
 
     // статус можна передавати: 'upcoming' або 'archive'
     const status = req.query.status || 'all'
 
     let filter = {}
+
     if (status === 'upcoming') {
-      filter.date = { $gte: today }
+      // Всі бронювання, що ще не пройшли
+      filter.date = { $gte: now.toJSDate() }
     } else if (status === 'archive') {
-      filter.date = { $lt: today }
+      // Всі минулі бронювання
+      filter.date = { $lt: now.toJSDate() }
     }
 
     const bookings = await Booking.find(filter)
-      .sort({ date: status === 'upcoming' ? 1 : -1 }) // сортуємо по даті
+      .sort({ date: status === 'upcoming' ? 1 : -1 })
       .skip(skip)
       .limit(limit)
 
@@ -204,20 +211,29 @@ export const getBookingPaginated = async (req, res) => {
       totalPages: Math.ceil(total / limit),
     })
   } catch (error) {
+    console.error(error)
     res.status(500).json({ message: 'Server error' })
   }
 }
+
 // GET AVAILABLE SLOTS (30-min slots)
 export const getAvailableSlots = async (req, res) => {
   try {
     const { date, startHour = 9, endHour = 18 } = req.query
+    if (!date) return res.status(400).json({ message: 'Date is required' })
 
-    if (!date) {
-      return res.status(400).json({ message: 'Date is required' })
-    }
+    // Локальний час для Прази
+    const tz = 'Europe/Prague'
 
-    const dayStart = new Date(`${date}T00:00:00`)
-    const dayEnd = new Date(`${date}T23:59:59`)
+    // Поточний час у Празі
+    const now = DateTime.now().setZone(tz)
+
+    // День, на який потрібні слоти
+    const day = DateTime.fromISO(date, { zone: tz })
+
+    // Всі бронювання на цей день
+    const dayStart = day.startOf('day').toJSDate()
+    const dayEnd = day.endOf('day').toJSDate()
 
     const bookings = await Booking.find({
       date: { $gte: dayStart, $lte: dayEnd },
@@ -227,25 +243,25 @@ export const getAvailableSlots = async (req, res) => {
 
     for (let hour = startHour; hour < endHour; hour++) {
       for (let min = 0; min < 60; min += 30) {
-        const slotStart = new Date(
-          `${date}T${hour.toString().padStart(2, '0')}:${min
-            .toString()
-            .padStart(2, '0')}:00`
-        )
-        const slotEnd = new Date(slotStart.getTime() + 30 * 60000)
+        const slotStart = day.set({ hour, minute: min, second: 0 })
+        const slotEnd = slotStart.plus({ minutes: 30 })
 
+        // Перевірка на конфлікт з існуючими бронюваннями
         const conflict = bookings.some((b) => {
-          const bStart = new Date(b.date)
-          const bEnd = new Date(bStart.getTime() + b.duration * 60000)
-          return slotStart < bEnd && slotEnd > bStart
+          const bStart = DateTime.fromJSDate(new Date(b.date), { zone: tz })
+          const bEnd = bStart.plus({ minutes: b.duration })
+          return Interval.fromDateTimes(slotStart, slotEnd).overlaps(
+            Interval.fromDateTimes(bStart, bEnd)
+          )
         })
 
-        slots.push({
-          time: `${hour.toString().padStart(2, '0')}:${min
-            .toString()
-            .padStart(2, '0')}`,
-          available: !conflict,
-        })
+        // Пропускаємо минулі слоти
+        if (slotStart > now) {
+          slots.push({
+            time: slotStart.toFormat('HH:mm'),
+            available: !conflict,
+          })
+        }
       }
     }
 
