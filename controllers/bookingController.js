@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 import Booking from '../models/Booking.js'
 import { DateTime, Interval } from 'luxon'
-
+import { sendBookingNotification } from '../telegramBot.js'
 const WORK_START = 9
 const WORK_END = 17
 const SLOT_INTERVAL = 30
@@ -54,7 +54,7 @@ export const createBooking = async (req, res) => {
       duration,
       userId: null,
     })
-
+    sendBookingNotification(booking)
     return res.status(201).json(booking)
   } catch (err) {
     console.error(err)
