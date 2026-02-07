@@ -28,12 +28,22 @@ const bot = new TelegramBot(token, { polling: false })
  * @param {string} booking.date
  */
 export function sendBookingNotification(booking) {
+  const formatedDate = new Date(booking.date)
+    .toLocaleString('uk-UA', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+    .replace(',', ' о')
   const text =
     `Нове бронювання!\n` +
     `Ім’я: ${booking.name}\n` +
     `Телефон: ${booking.phone}\n` +
     `Послуга: ${booking.service}\n` +
-    `Дата: ${booking.date}`
+    `Дата: ${formatedDate}`
 
   bot
     .sendMessage(chatId, text)
