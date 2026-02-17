@@ -219,7 +219,7 @@ export const getBookingPaginated = async (req, res) => {
 // GET AVAILABLE SLOTS (30-min slots)
 export const getAvailableSlots = async (req, res) => {
   try {
-    const { date, startHour = 9, endHour = 18 } = req.query
+    const { date, startHour = 9, endHour = 20 } = req.query
     if (!date) return res.status(400).json({ message: 'Date is required' })
 
     // Локальний час для Прази
