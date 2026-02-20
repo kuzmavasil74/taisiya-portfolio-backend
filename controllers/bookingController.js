@@ -254,6 +254,9 @@ export const getAvailableSlots = async (req, res) => {
             Interval.fromDateTimes(bStart, bEnd)
           )
         })
+        console.log('Now:', now.toISO())
+        console.log('Slot:', slotStart.toISO())
+        console.log('Conflict:', conflict)
 
         // Пропускаємо минулі слоти
         if (slotStart > now) {
@@ -261,9 +264,6 @@ export const getAvailableSlots = async (req, res) => {
             time: slotStart.toFormat('HH:mm'),
             available: !conflict,
           })
-          console.log('Now:', now.toISO())
-          console.log('Slot:', slotStart.toISO())
-          console.log('Conflict:', conflict)
         }
       }
     }
