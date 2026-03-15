@@ -1,8 +1,7 @@
 import Booking from './models/Booking.js'
-import TelegramBot from 'node-telegram-bot-api'
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
-
+import bot from './telegramBot.js'
 dotenv.config()
 
 mongoose
@@ -13,7 +12,6 @@ mongoose
   .then(() => console.log('MongoDB connected'))
   .catch((err) => console.error('MongoDB connection error:', err))
 
-const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true })
 const CHECK_INTERVAL = 5 * 60 * 1000 // перевірка кожні 5 хв
 
 // --- Функція перевірки нагадувань ---
