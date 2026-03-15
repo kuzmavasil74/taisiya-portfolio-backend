@@ -26,7 +26,7 @@ async function checkReminders() {
     })
 
     for (const booking of bookings) {
-      if (!booking.userId) continue
+      if (!booking.telegramId) continue
       const meetingTime = new Date(booking.date)
 
       const keyboard = {
@@ -50,7 +50,7 @@ async function checkReminders() {
       const dayBefore = new Date(meetingTime.getTime() - 24 * 60 * 60 * 1000)
       if (!booking.reminderDaySent && now >= dayBefore) {
         await bot.sendMessage(
-          booking.userId,
+          booking.telegramId,
           `Нагадування ✨\nУ вас запис до перукаря завтра\n🕒 ${meetingTime.toLocaleTimeString(
             [],
             { hour: '2-digit', minute: '2-digit' }
@@ -62,10 +62,10 @@ async function checkReminders() {
       }
 
       // --- Нагадування за годину ---
-      const hourBefore = new Date(meetingTime.getTime() - 60 * 60 * 1000)
+      const hourBefore = new Date(meetingTime.getTime() - 12 * 50 * 60 * 1000)
       if (!booking.reminderHourSent && now >= hourBefore) {
         await bot.sendMessage(
-          booking.userId,
+          booking.telegramId,
           `Нагадування ⏰\nЧерез годину у вас запис\n🕒 ${meetingTime.toLocaleTimeString(
             [],
             { hour: '2-digit', minute: '2-digit' }
@@ -102,6 +102,7 @@ bot.on('callback_query', async (query) => {
   )
   await bot.answerCallbackQuery(query.id, { text: `Натиснуто: ${action}` })
 })
+
 // --- Тестове нагадування ---
 bot.onText(/\/testReminder/, async (msg) => {
   const chatId = msg.chat.id
