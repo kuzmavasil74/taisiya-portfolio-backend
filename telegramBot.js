@@ -39,6 +39,9 @@ export function sendBookingNotification(booking) {
 bot.onText(/\/start (.+)/, async (msg, match) => {
   const bookingId = match[1]
   const telegramId = msg.from.id
+  console.log('Підписка на нагадування:', bookingId, telegramId)
+  console.log('bookingId:', bookingId)
+  console.log('telegramId:', telegramId)
 
   try {
     const booking = await Booking.findByIdAndUpdate(
