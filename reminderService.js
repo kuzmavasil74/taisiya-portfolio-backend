@@ -62,7 +62,7 @@ async function checkReminders() {
       }
 
       // --- Нагадування за годину ---
-      const hourBefore = new Date(meetingTime.getTime() - 12 * 50 * 60 * 1000)
+      const hourBefore = new Date(meetingTime.getTime() - 60 * 60 * 1000)
       if (!booking.reminderHourSent && now >= hourBefore) {
         await bot.sendMessage(
           booking.telegramId,
