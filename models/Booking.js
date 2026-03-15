@@ -14,9 +14,8 @@ const bookingSchema = new mongoose.Schema(
       default: 'pending',
     },
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: false,
+      type: Number,
+      default: null,
     },
     reminderDaySent: { type: Boolean, default: false },
     reminderHourSent: { type: Boolean, default: false },
