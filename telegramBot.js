@@ -5,15 +5,13 @@ import Booking from './models/Booking.js'
 dotenv.config()
 
 const token = process.env.TELEGRAM_BOT_TOKEN
-const chatId = process.env.TELEGRAM_CHAT_ID
-
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN не заданий у .env')
-if (!chatId) throw new Error('TELEGRAM_CHAT_ID не заданий у .env')
 
 const bot = new TelegramBot(token, { polling: true })
 
+// --- Відправка повідомлення про нове бронювання адміну ---
 export function sendBookingNotification(booking) {
-  const formatedDate = new Date(booking.date)
+  const formattedDate = new Date(booking.date)
     .toLocaleString('uk-UA', {
       day: '2-digit',
       month: '2-digit',
@@ -23,48 +21,101 @@ export function sendBookingNotification(booking) {
       hour12: false,
     })
     .replace(',', ' о')
+
   const text =
     `Нове бронювання!\n` +
     `Ім’я: ${booking.name}\n` +
     `Телефон: ${booking.phone}\n` +
     `Послуга: ${booking.service}\n` +
-    `Дата: ${formatedDate}`
+    `Дата: ${formattedDate}`
+
+  const keyboard = {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '✅ Прийду', callback_data: `confirm_${booking._id}` },
+          { text: '❌ Скасувати', callback_data: `cancel_${booking._id}` },
+        ],
+        [
+          {
+            text: '⏰ Відкласти на 30 хв',
+            callback_data: `postpone_${booking._id}`,
+          },
+        ],
+      ],
+    },
+  }
 
   bot
-    .sendMessage(chatId, text)
+    .sendMessage(process.env.TELEGRAM_CHAT_ID, text, keyboard)
     .then(() => console.log('Повідомлення успішно відправлено!'))
     .catch((err) => console.error('Помилка при відправці повідомлення:', err))
 }
 
+// --- Підписка на нагадування через /start <bookingId> ---
 bot.onText(/\/start (.+)/, async (msg, match) => {
   const bookingId = match[1]
-  const telegramId = msg.from.id
+  const telegramId = msg.from.id // це число
   console.log('Підписка на нагадування:', bookingId, telegramId)
-  console.log('bookingId:', bookingId)
-  console.log('telegramId:', telegramId)
 
   try {
+    // оновлюємо telegramId у бронюванні
     const booking = await Booking.findByIdAndUpdate(
       bookingId,
-      { userId: telegramId },
+      { telegramId: telegramId },
       { new: true }
     )
 
-    if (booking) {
-      bot.sendMessage(
-        telegramId,
-        `✅ Ви підписані на нагадування для бронювання "${booking.service}"!`
-      )
-    } else {
-      bot.sendMessage(telegramId, `❌ Не вдалося знайти бронювання.`)
+    if (!booking) {
+      await bot.sendMessage(telegramId, `❌ Не вдалося знайти бронювання.`)
+      return
     }
+
+    // підтвердження підписки
+    await bot.sendMessage(
+      telegramId,
+      `✅ Ви підписані на нагадування для бронювання "${booking.service}"!`
+    )
   } catch (err) {
     console.error(err)
-    bot.sendMessage(
+    await bot.sendMessage(
       telegramId,
       `❌ Сталася помилка при підписці на нагадування.`
     )
   }
+})
+
+// --- Тестове нагадування ---
+bot.onText(/\/testReminder/, async (msg) => {
+  const chatId = msg.chat.id
+  await bot.sendMessage(
+    chatId,
+    `🧪 Тестове нагадування\n\nЧерез годину у вас запис\n🕒 10:30\n💇‍♀️ Послуга: menHaircuts`
+  )
+})
+
+// --- Обробка inline кнопок ---
+bot.on('callback_query', async (query) => {
+  const [action, bookingId] = query.data.split('_')
+  const chatId = query.message.chat.id
+  const messageId = query.message.message_id
+
+  const booking = await Booking.findById(bookingId)
+  if (!booking) return
+
+  if (action === 'confirm') booking.status = 'confirmed'
+  if (action === 'cancel') booking.status = 'canceled'
+  if (action === 'postpone')
+    booking.date = new Date(booking.date.getTime() + 30 * 60 * 1000)
+
+  await booking.save()
+
+  // очищаємо клавіатуру після натискання
+  await bot.editMessageReplyMarkup(
+    { inline_keyboard: [] },
+    { chat_id: chatId, message_id: messageId }
+  )
+  await bot.answerCallbackQuery(query.id, { text: `Натиснуто: ${action}` })
 })
 
 export default bot

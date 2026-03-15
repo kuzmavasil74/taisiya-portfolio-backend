@@ -17,6 +17,7 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    telegramId: { type: Number, required: false },
     reminderDaySent: { type: Boolean, default: false },
     reminderHourSent: { type: Boolean, default: false },
   },
