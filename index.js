@@ -3,7 +3,6 @@ import dotenv from 'dotenv'
 import morgan from 'morgan'
 import cors from 'cors'
 
-import homeRoutes from './routes/homeRoutes.js'
 import userRoutes from './routes/userRoutes.js'
 import bookingRoutes from './routes/bookingRoutes.js'
 import authRoutes from './routes/authRoutes.js'
@@ -32,7 +31,6 @@ app.use(express.json())
 app.use(morgan('dev'))
 // Public route
 app.use('/auth', authRoutes)
-app.use('/', homeRoutes)
 
 // Protected route
 app.use('/users', userRoutes)
