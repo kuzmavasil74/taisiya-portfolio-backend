@@ -104,6 +104,19 @@ bot.on('callback_query', async (query) => {
   )
   await bot.answerCallbackQuery(query.id, { text: `Натиснуто: ${action}` })
 })
+// --- Тестове нагадування ---
+bot.onText(/\/testReminder/, async (msg) => {
+  const chatId = msg.chat.id
+
+  await bot.sendMessage(
+    chatId,
+    `🧪 Тестове нагадування
+
+Через годину у вас запис
+🕒 10:30
+💇‍♀️ Послуга: menHaircuts`
+  )
+})
 
 // --- Запуск перевірки ---
 setInterval(checkReminders, CHECK_INTERVAL)
