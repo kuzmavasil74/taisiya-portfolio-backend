@@ -1,32 +1,17 @@
 import TelegramBot from 'node-telegram-bot-api'
 import dotenv from 'dotenv'
+import Booking from './models/Booking.js'
 
 dotenv.config()
 
-// Отримуємо токен та chatId з .env
 const token = process.env.TELEGRAM_BOT_TOKEN
 const chatId = process.env.TELEGRAM_CHAT_ID
 
-// Перевірка, чи є токен і chatId
-if (!token) {
-  throw new Error('TELEGRAM_BOT_TOKEN не заданий у .env')
-}
+if (!token) throw new Error('TELEGRAM_BOT_TOKEN не заданий у .env')
+if (!chatId) throw new Error('TELEGRAM_CHAT_ID не заданий у .env')
 
-if (!chatId) {
-  throw new Error('TELEGRAM_CHAT_ID не заданий у .env')
-}
+const bot = new TelegramBot(token, { polling: true })
 
-// Створюємо бот (тільки для відправки повідомлень)
-const bot = new TelegramBot(token, { polling: false })
-
-/**
- * Відправка повідомлення про нове бронювання
- * @param {Object} booking - дані бронювання
- * @param {string} booking.name
- * @param {string} booking.phone
- * @param {string} booking.service
- * @param {string} booking.date
- */
 export function sendBookingNotification(booking) {
   const formatedDate = new Date(booking.date)
     .toLocaleString('uk-UA', {
@@ -50,5 +35,33 @@ export function sendBookingNotification(booking) {
     .then(() => console.log('Повідомлення успішно відправлено!'))
     .catch((err) => console.error('Помилка при відправці повідомлення:', err))
 }
+
+bot.onText(/\/start (.+)/, async (msg, match) => {
+  const bookingId = match[1]
+  const telegramId = msg.from.id
+
+  try {
+    const booking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { userId: telegramId },
+      { new: true }
+    )
+
+    if (booking) {
+      bot.sendMessage(
+        telegramId,
+        `✅ Ви підписані на нагадування для бронювання "${booking.service}"!`
+      )
+    } else {
+      bot.sendMessage(telegramId, `❌ Не вдалося знайти бронювання.`)
+    }
+  } catch (err) {
+    console.error(err)
+    bot.sendMessage(
+      telegramId,
+      `❌ Сталася помилка при підписці на нагадування.`
+    )
+  }
+})
 
 export default bot
