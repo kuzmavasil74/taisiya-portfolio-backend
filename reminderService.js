@@ -1,6 +1,9 @@
 import Booking from './models/Booking.js'
 import TelegramBot from 'node-telegram-bot-api'
 import mongoose from 'mongoose'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 mongoose
   .connect(process.env.MONGO_URI, {
@@ -10,48 +13,10 @@ mongoose
   .then(() => console.log('MongoDB connected'))
   .catch((err) => console.error('MongoDB connection error:', err))
 
-const CHECK_INTERVAL = 60 * 60 * 1000 // 1 година
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true })
+const CHECK_INTERVAL = 60 * 60 * 1000 // перевірка кожну годину
 
-// ===== Обробка натискання кнопок =====
-bot.on('callback_query', async (query) => {
-  const [action, bookingId] = query.data.split('_')
-  const chatId = query.message.chat.id
-  const messageId = query.message.message_id
-
-  const booking = await Booking.findById(bookingId)
-  if (!booking) return
-
-  let text = ''
-  if (action === 'confirm') {
-    booking.status = 'confirmed'
-    await booking.save()
-    text = 'Запис підтверджено ✅'
-  }
-
-  if (action === 'cancel') {
-    booking.status = 'canceled'
-    await booking.save()
-    text = 'Запис скасовано ❌'
-  }
-
-  if (action === 'postpone') {
-    booking.date = new Date(booking.date.getTime() + 30 * 60 * 1000)
-    await booking.save()
-    text = 'Запис відкладено на 30 хв ⏰'
-  }
-
-  // Прибираємо кнопки після натискання
-  await bot.editMessageReplyMarkup(
-    { inline_keyboard: [] },
-    { chat_id: chatId, message_id: messageId }
-  )
-
-  // Показуємо коротке повідомлення-підтвердження
-  await bot.answerCallbackQuery(query.id, { text })
-})
-
-// ===== Функція нагадувань =====
+// --- Функція перевірки нагадувань ---
 async function checkReminders() {
   const now = new Date()
 
@@ -83,7 +48,7 @@ async function checkReminders() {
         },
       }
 
-      // Нагадування за день
+      // --- Нагадування за день ---
       const dayBefore = new Date(meetingTime.getTime() - 24 * 60 * 60 * 1000)
       if (!booking.reminderDaySent && now >= dayBefore) {
         await bot.sendMessage(
@@ -98,7 +63,7 @@ async function checkReminders() {
         await booking.save()
       }
 
-      // Нагадування за годину
+      // --- Нагадування за годину ---
       const hourBefore = new Date(meetingTime.getTime() - 60 * 60 * 1000)
       if (!booking.reminderHourSent && now >= hourBefore) {
         await bot.sendMessage(
@@ -118,6 +83,29 @@ async function checkReminders() {
   }
 }
 
-// ===== Таймер =====
+// --- Обробник натискань кнопок ---
+bot.on('callback_query', async (query) => {
+  const [action, bookingId] = query.data.split('_')
+  const chatId = query.message.chat.id
+  const messageId = query.message.message_id
+
+  const booking = await Booking.findById(bookingId)
+  if (!booking) return
+
+  if (action === 'confirm') booking.status = 'confirmed'
+  if (action === 'cancel') booking.status = 'canceled'
+  if (action === 'postpone')
+    booking.date = new Date(booking.date.getTime() + 30 * 60 * 1000)
+
+  await booking.save()
+  await bot.editMessageReplyMarkup(
+    { inline_keyboard: [] },
+    { chat_id: chatId, message_id: messageId }
+  )
+  await bot.answerCallbackQuery(query.id, { text: `Натиснуто: ${action}` })
+})
+
+// --- Запуск перевірки ---
 setInterval(checkReminders, CHECK_INTERVAL)
 checkReminders()
+console.log('Reminder service started, bot is polling...')
