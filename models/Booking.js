@@ -18,6 +18,8 @@ const bookingSchema = new mongoose.Schema(
       ref: 'User',
       required: false,
     },
+    reminderDaySent: { type: Boolean, default: false },
+    reminderHourSent: { type: Boolean, default: false },
   },
   { timestamps: true }
 )
