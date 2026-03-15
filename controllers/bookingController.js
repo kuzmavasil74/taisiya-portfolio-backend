@@ -3,7 +3,7 @@ import Booking from '../models/Booking.js'
 import { DateTime, Interval } from 'luxon'
 import { sendBookingNotification } from '../telegramBot.js'
 const WORK_START = 9
-const WORK_END = 17
+const WORK_END = 24
 const SLOT_INTERVAL = 30
 const SERVICE_DURATIONS = {
   haircuts: 60,
