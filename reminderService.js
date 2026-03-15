@@ -116,7 +116,7 @@ bot.onText(/\/testReminder/, async (msg) => {
 💇‍♀️ Послуга: menHaircuts`
   )
 })
-
+//
 // --- Запуск перевірки ---
 setInterval(checkReminders, CHECK_INTERVAL)
 checkReminders()
