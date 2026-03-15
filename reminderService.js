@@ -14,7 +14,7 @@ mongoose
   .catch((err) => console.error('MongoDB connection error:', err))
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true })
-const CHECK_INTERVAL = 5 * 60 * 1000 // перевірка кожну годину
+const CHECK_INTERVAL = 5 * 60 * 1000 // перевірка кожні 5 хв
 
 // --- Функція перевірки нагадувань ---
 async function checkReminders() {
@@ -64,7 +64,7 @@ async function checkReminders() {
       }
 
       // --- Нагадування за годину ---
-      const hourBefore = new Date(meetingTime.getTime() - 12 * 60 * 60 * 1000)
+      const hourBefore = new Date(meetingTime.getTime() - 60 * 60 * 1000)
       if (!booking.reminderHourSent && now >= hourBefore) {
         await bot.sendMessage(
           booking.userId,
