@@ -17,7 +17,7 @@ const CHECK_INTERVAL = 5 * 60 * 1000 // перевірка кожні 5 хв
 // --- Функція перевірки нагадувань ---
 async function checkReminders() {
   const now = new Date()
-
+  console.log('Bookings found:', bookings.length)
   try {
     const bookings = await Booking.find({
       status: { $ne: 'canceled' },
@@ -26,7 +26,9 @@ async function checkReminders() {
     })
 
     for (const booking of bookings) {
-      if (!booking.telegramId) continue
+      console.log('telegramId:', booking.telegramId)
+      console.log('userId:', booking.userId)
+      if (!booking.userId) continue
       const meetingTime = new Date(booking.date)
 
       const keyboard = {
@@ -50,7 +52,7 @@ async function checkReminders() {
       const dayBefore = new Date(meetingTime.getTime() - 24 * 60 * 60 * 1000)
       if (!booking.reminderDaySent && now >= dayBefore) {
         await bot.sendMessage(
-          booking.telegramId,
+          booking.userId,
           `Нагадування ✨\nУ вас запис до перукаря завтра\n🕒 ${meetingTime.toLocaleTimeString(
             [],
             { hour: '2-digit', minute: '2-digit' }
@@ -65,7 +67,7 @@ async function checkReminders() {
       const hourBefore = new Date(meetingTime.getTime() - 60 * 60 * 1000)
       if (!booking.reminderHourSent && now >= hourBefore) {
         await bot.sendMessage(
-          booking.telegramId,
+          booking.userId,
           `Нагадування ⏰\nЧерез годину у вас запис\n🕒 ${meetingTime.toLocaleTimeString(
             [],
             { hour: '2-digit', minute: '2-digit' }
