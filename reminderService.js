@@ -17,7 +17,8 @@ const CHECK_INTERVAL = 5 * 60 * 1000 // перевірка кожні 5 хв
 // --- Функція перевірки нагадувань ---
 async function checkReminders() {
   const now = new Date()
-  console.log('Bookings found:', bookings.length)
+  console.log('NOW:', now)
+
   try {
     const bookings = await Booking.find({
       status: { $ne: 'canceled' },
@@ -25,11 +26,24 @@ async function checkReminders() {
       $or: [{ reminderDaySent: false }, { reminderHourSent: false }],
     })
 
+    console.log('Bookings found:', bookings.length)
+
     for (const booking of bookings) {
-      console.log('telegramId:', booking.telegramId)
-      console.log('userId:', booking.userId)
       if (!booking.userId) continue
+
       const meetingTime = new Date(booking.date)
+      const meetingTimeStr = meetingTime.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Prague',
+      })
+
+      const dayBefore = new Date(meetingTime.getTime() - 24 * 60 * 60 * 1000)
+      const hourBefore = new Date(meetingTime.getTime() - 60 * 60 * 1000)
+
+      console.log('Booking time:', meetingTime)
+      console.log('Day before:', dayBefore)
+      console.log('Hour before:', hourBefore)
 
       const keyboard = {
         reply_markup: {
@@ -49,33 +63,39 @@ async function checkReminders() {
       }
 
       // --- Нагадування за день ---
-      const dayBefore = new Date(meetingTime.getTime() - 24 * 60 * 60 * 1000)
       if (!booking.reminderDaySent && now >= dayBefore) {
-        await bot.sendMessage(
-          booking.userId,
-          `Нагадування ✨\nУ вас запис до перукаря завтра\n🕒 ${meetingTime.toLocaleTimeString(
-            [],
-            { hour: '2-digit', minute: '2-digit' }
-          )}\n💇‍♀️ Послуга: ${booking.service}\nДо зустрічі!`,
-          keyboard
-        )
-        booking.reminderDaySent = true
-        await booking.save()
+        try {
+          await bot.sendMessage(
+            booking.userId,
+            `Нагадування ✨\nУ вас запис до перукаря завтра\n🕒 ${meetingTimeStr}\n💇‍♀️ Послуга: ${booking.service}\nДо зустрічі!`,
+            keyboard
+          )
+          booking.reminderDaySent = true
+          await booking.save()
+        } catch (err) {
+          console.error(
+            `Cannot send day reminder to ${booking.userId}:`,
+            err.message
+          )
+        }
       }
 
       // --- Нагадування за годину ---
-      const hourBefore = new Date(meetingTime.getTime() - 60 * 60 * 1000)
       if (!booking.reminderHourSent && now >= hourBefore) {
-        await bot.sendMessage(
-          booking.userId,
-          `Нагадування ⏰\nЧерез годину у вас запис\n🕒 ${meetingTime.toLocaleTimeString(
-            [],
-            { hour: '2-digit', minute: '2-digit' }
-          )}\n💇‍♀️ Послуга: ${booking.service}`,
-          keyboard
-        )
-        booking.reminderHourSent = true
-        await booking.save()
+        try {
+          await bot.sendMessage(
+            booking.userId,
+            `Нагадування ⏰\nЧерез годину у вас запис\n🕒 ${meetingTimeStr}\n💇‍♀️ Послуга: ${booking.service}`,
+            keyboard
+          )
+          booking.reminderHourSent = true
+          await booking.save()
+        } catch (err) {
+          console.error(
+            `Cannot send hour reminder to ${booking.userId}:`,
+            err.message
+          )
+        }
       }
     }
   } catch (error) {
@@ -85,40 +105,54 @@ async function checkReminders() {
 
 // --- Обробник натискань кнопок ---
 bot.on('callback_query', async (query) => {
-  const [action, bookingId] = query.data.split('_')
-  const chatId = query.message.chat.id
-  const messageId = query.message.message_id
+  try {
+    const [action, bookingId] = query.data.split('_')
+    const chatId = query.message.chat.id
+    const messageId = query.message.message_id
 
-  const booking = await Booking.findById(bookingId)
-  if (!booking) return
+    const booking = await Booking.findById(bookingId)
+    if (!booking) return
 
-  if (action === 'confirm') booking.status = 'confirmed'
-  if (action === 'cancel') booking.status = 'canceled'
-  if (action === 'postpone')
-    booking.date = new Date(booking.date.getTime() + 30 * 60 * 1000)
+    if (action === 'confirm') booking.status = 'confirmed'
+    if (action === 'cancel') booking.status = 'canceled'
+    if (action === 'postpone')
+      booking.date = new Date(booking.date.getTime() + 30 * 60 * 1000)
 
-  await booking.save()
-  await bot.editMessageReplyMarkup(
-    { inline_keyboard: [] },
-    { chat_id: chatId, message_id: messageId }
-  )
-  await bot.answerCallbackQuery(query.id, { text: `Натиснуто: ${action}` })
+    await booking.save()
+
+    try {
+      await bot.editMessageReplyMarkup(
+        { inline_keyboard: [] },
+        { chat_id: chatId, message_id: messageId }
+      )
+    } catch (err) {
+      console.error('Cannot edit message reply markup:', err.message)
+    }
+
+    await bot.answerCallbackQuery(query.id, { text: `Натиснуто: ${action}` })
+  } catch (err) {
+    console.error('Error handling callback_query:', err.message)
+  }
 })
 
 // --- Тестове нагадування ---
 bot.onText(/\/testReminder/, async (msg) => {
   const chatId = msg.chat.id
 
-  await bot.sendMessage(
-    chatId,
-    `🧪 Тестове нагадування
+  try {
+    await bot.sendMessage(
+      chatId,
+      `🧪 Тестове нагадування
 
 Через годину у вас запис
 🕒 10:30
 💇‍♀️ Послуга: menHaircuts`
-  )
+    )
+  } catch (err) {
+    console.error('Cannot send test reminder:', err.message)
+  }
 })
-//
+
 // --- Запуск перевірки ---
 setInterval(checkReminders, CHECK_INTERVAL)
 checkReminders()
