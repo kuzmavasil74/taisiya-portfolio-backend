@@ -10,10 +10,12 @@ import { updateSchema } from '../validation/userValidator.js'
 import { validateObjectId } from '../middleware/validateObjectId.js'
 import { auth } from '../middleware/auth.js'
 import { requireRole } from '../middleware/role.js'
+import { getMe } from '../controllers/userController.js'
 
 const router = express.Router()
 router.post('/', auth, requireRole('admin'), validate(userSchema), createUser)
 router.get('/', auth, requireRole('admin'), getUsers)
+router.get('/me', auth, getMe)
 router.get('/:id', validateObjectId('id'), getUsersById)
 router.put(
   '/:id',

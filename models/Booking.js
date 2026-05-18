@@ -8,6 +8,7 @@ const bookingSchema = new mongoose.Schema(
     service: { type: String, required: true, trim: true },
     date: { type: Date, required: true }, // початок бронювання
     duration: { type: Number, required: true }, // тривалість послуги у хвилинах
+    price: { type: Number, default: 0 },
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'canceled'],

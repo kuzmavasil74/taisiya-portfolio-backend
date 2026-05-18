@@ -35,11 +35,14 @@ export const register = async (req, res) => {
     )
 
     return res.status(201).json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      createdAt: user.createdAt,
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+      },
     })
   } catch (err) {
     console.error(err)

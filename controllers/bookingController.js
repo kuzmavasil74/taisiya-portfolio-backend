@@ -5,6 +5,7 @@ import { sendBookingNotification } from '../telegramBot.js'
 const WORK_START = 9
 const WORK_END = 24
 const SLOT_INTERVAL = 30
+
 const SERVICE_DURATIONS = {
   haircuts: 60,
   menHaircuts: 30,
@@ -13,6 +14,16 @@ const SERVICE_DURATIONS = {
   coldRestoration: 90,
   coldBotox: 60,
   polishing: 30,
+}
+
+const SERVICE_PRICES = {
+  haircuts: 800,
+  menHaircuts: 400,
+  keratin: 2500,
+  hotBotox: 1500,
+  coldRestoration: 2000,
+  coldBotox: 1500,
+  polishing: 600,
 }
 
 // CREATE BOOKING
@@ -52,7 +63,8 @@ export const createBooking = async (req, res) => {
       service,
       date: bookingStart,
       duration,
-      userId: null,
+      price: SERVICE_PRICES[service] || 0,
+      userId: req.user?.id || null,
     })
     sendBookingNotification(booking)
     return res.status(201).json(booking)
@@ -68,12 +80,9 @@ export const getBooking = async (req, res) => {
     let bookings
 
     if (req.user.role === 'admin') {
-      bookings = await Booking.find().populate('userId')
+      bookings = await Booking.find().sort({ date: -1 })
     } else {
-      console.log(req.user, typeof req.user.id)
-      bookings = await Booking.find({
-        userId: new mongoose.Types.ObjectId(req.user.id),
-      })
+      bookings = await Booking.find({ userId: req.user.id }).sort({ date: -1 })
     }
 
     return res.status(200).json(bookings)

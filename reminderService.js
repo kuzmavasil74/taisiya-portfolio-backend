@@ -103,38 +103,6 @@ async function checkReminders() {
   }
 }
 
-// --- Обробник натискань кнопок ---
-bot.on('callback_query', async (query) => {
-  try {
-    const [action, bookingId] = query.data.split('_')
-    const chatId = query.message.chat.id
-    const messageId = query.message.message_id
-
-    const booking = await Booking.findById(bookingId)
-    if (!booking) return
-
-    if (action === 'confirm') booking.status = 'confirmed'
-    if (action === 'cancel') booking.status = 'canceled'
-    if (action === 'postpone')
-      booking.date = new Date(booking.date.getTime() + 30 * 60 * 1000)
-
-    await booking.save()
-
-    try {
-      await bot.editMessageReplyMarkup(
-        { inline_keyboard: [] },
-        { chat_id: chatId, message_id: messageId }
-      )
-    } catch (err) {
-      console.error('Cannot edit message reply markup:', err.message)
-    }
-
-    await bot.answerCallbackQuery(query.id, { text: `Натиснуто: ${action}` })
-  } catch (err) {
-    console.error('Error handling callback_query:', err.message)
-  }
-})
-
 // --- Тестове нагадування ---
 bot.onText(/\/testReminder/, async (msg) => {
   const chatId = msg.chat.id
