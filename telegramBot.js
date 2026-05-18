@@ -7,7 +7,7 @@ dotenv.config()
 const token = process.env.TELEGRAM_BOT_TOKEN
 if (!token) throw new Error('TELEGRAM_BOT_TOKEN не заданий у .env')
 
-const bot = new TelegramBot(token, { polling: true })
+const bot = new TelegramBot(token, { polling: false })
 
 // --- Відправка повідомлення про нове бронювання адміну ---
 export function sendBookingNotification(booking) {
@@ -117,5 +117,7 @@ bot.on('callback_query', async (query) => {
   )
   await bot.answerCallbackQuery(query.id, { text: `Натиснуто: ${action}` })
 })
-
+if (process.env.ENABLE_BOT_POLLING === 'true') {
+  bot.startPolling()
+}
 export default bot

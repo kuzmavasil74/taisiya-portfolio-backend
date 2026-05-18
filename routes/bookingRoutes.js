@@ -19,7 +19,6 @@ router.post('/', validate(bookingSchema), createBooking)
 router.get('/all', auth, getBooking)
 router.get('/available-slots', getAvailableSlots)
 router.get('/', auth, requireRole('admin'), getBookingPaginated)
-router.get('/available-slots', getAvailableSlots)
 router.get('/:id', auth, validateObjectId('id'), getBookingById)
 router.put(
   '/:id',
