@@ -9,7 +9,7 @@ import authRoutes from './routes/authRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import './config/db.js'
-
+import './reminderService.js'
 dotenv.config()
 
 const app = express()

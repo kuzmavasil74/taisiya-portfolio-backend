@@ -29,7 +29,7 @@ async function checkReminders() {
     console.log('Bookings found:', bookings.length)
 
     for (const booking of bookings) {
-      if (!booking.userId) continue
+      if (!booking.telegramId) continue
 
       const meetingTime = new Date(booking.date)
       const meetingTimeStr = meetingTime.toLocaleTimeString([], {
@@ -66,7 +66,7 @@ async function checkReminders() {
       if (!booking.reminderDaySent && now >= dayBefore) {
         try {
           await bot.sendMessage(
-            booking.userId,
+            booking.telegramId,
             `Нагадування ✨\nУ вас запис до перукаря завтра\n🕒 ${meetingTimeStr}\n💇‍♀️ Послуга: ${booking.service}\nДо зустрічі!`,
             keyboard
           )
@@ -74,7 +74,7 @@ async function checkReminders() {
           await booking.save()
         } catch (err) {
           console.error(
-            `Cannot send day reminder to ${booking.userId}:`,
+            `Cannot send day reminder to ${booking.telegramId}:`,
             err.message
           )
         }
@@ -84,7 +84,7 @@ async function checkReminders() {
       if (!booking.reminderHourSent && now >= hourBefore) {
         try {
           await bot.sendMessage(
-            booking.userId,
+            booking.telegramId,
             `Нагадування ⏰\nЧерез годину у вас запис\n🕒 ${meetingTimeStr}\n💇‍♀️ Послуга: ${booking.service}`,
             keyboard
           )
@@ -92,7 +92,7 @@ async function checkReminders() {
           await booking.save()
         } catch (err) {
           console.error(
-            `Cannot send hour reminder to ${booking.userId}:`,
+            `Cannot send hour reminder to ${booking.telegramId}:`,
             err.message
           )
         }
