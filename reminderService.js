@@ -97,24 +97,6 @@ async function checkReminders() {
   }
 }
 
-// --- Тестове нагадування ---
-bot.onText(/\/testReminder/, async (msg) => {
-  const chatId = msg.chat.id
-
-  try {
-    await bot.sendMessage(
-      chatId,
-      `🧪 Тестове нагадування
-
-Через годину у вас запис
-🕒 10:30
-💇‍♀️ Послуга: menHaircuts`
-    )
-  } catch (err) {
-    console.error('Cannot send test reminder:', err.message)
-  }
-})
-
 // --- Запуск перевірки ---
 setInterval(checkReminders, CHECK_INTERVAL)
 checkReminders()
