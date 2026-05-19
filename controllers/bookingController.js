@@ -9,7 +9,7 @@ const SLOT_INTERVAL = 30
 const SERVICE_DURATIONS = {
   womenHaircut: 60,
   menHaircut: 30,
-  menHaircutBeard: 45,
+  menHaircutBeard: 60,
   balayage: 180,
   airtouch: 240,
   exitBlack: 240,
