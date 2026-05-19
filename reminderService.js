@@ -52,12 +52,6 @@ async function checkReminders() {
               { text: '✅ Прийду', callback_data: `confirm_${booking._id}` },
               { text: '❌ Скасувати', callback_data: `cancel_${booking._id}` },
             ],
-            [
-              {
-                text: '⏰ Відкласти на 30 хв',
-                callback_data: `postpone_${booking._id}`,
-              },
-            ],
           ],
         },
       }

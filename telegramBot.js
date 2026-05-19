@@ -36,12 +36,6 @@ export function sendBookingNotification(booking) {
           { text: '✅ Прийду', callback_data: `confirm_${booking._id}` },
           { text: '❌ Скасувати', callback_data: `cancel_${booking._id}` },
         ],
-        [
-          {
-            text: '⏰ Відкласти на 30 хв',
-            callback_data: `postpone_${booking._id}`,
-          },
-        ],
       ],
     },
   }
@@ -105,8 +99,6 @@ bot.on('callback_query', async (query) => {
 
   if (action === 'confirm') booking.status = 'confirmed'
   if (action === 'cancel') booking.status = 'canceled'
-  if (action === 'postpone')
-    booking.date = new Date(booking.date.getTime() + 30 * 60 * 1000)
 
   await booking.save()
 
