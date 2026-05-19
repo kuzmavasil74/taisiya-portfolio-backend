@@ -7,23 +7,37 @@ const WORK_END = 24
 const SLOT_INTERVAL = 30
 
 const SERVICE_DURATIONS = {
-  haircuts: 60,
-  menHaircuts: 30,
-  keratin: 90,
-  hotBotox: 60,
-  coldRestoration: 90,
-  coldBotox: 60,
-  polishing: 30,
+  womenHaircut: 60,
+  menHaircut: 30,
+  menHaircutBeard: 45,
+  balayage: 180,
+  airtouch: 240,
+  exitBlack: 240,
+  brazilianColoring: 180,
+  toning: 60,
+  restorationShort: 120,
+  restorationMedium: 150,
+  restorationLong: 180,
+  curlingShort: 120,
+  curlingMedium: 150,
+  curlingLong: 180,
 }
 
 const SERVICE_PRICES = {
-  haircuts: 800,
-  menHaircuts: 400,
-  keratin: 2500,
-  hotBotox: 1500,
-  coldRestoration: 2000,
-  coldBotox: 1500,
-  polishing: 600,
+  womenHaircut: 600,
+  menHaircut: 500,
+  menHaircutBeard: 600,
+  balayage: 2800,
+  airtouch: 3500,
+  exitBlack: 4000,
+  brazilianColoring: 3000,
+  toning: 1000,
+  restorationShort: 2000,
+  restorationMedium: 2200,
+  restorationLong: 2400,
+  curlingShort: 2100,
+  curlingMedium: 2200,
+  curlingLong: 2400,
 }
 
 // CREATE BOOKING
