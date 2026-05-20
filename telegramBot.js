@@ -110,6 +110,10 @@ bot.on('callback_query', async (query) => {
   await bot.answerCallbackQuery(query.id, { text: `Натиснуто: ${action}` })
 })
 if (process.env.ENABLE_BOT_POLLING === 'true') {
+  setTimeout(() => {
+    bot.startPolling()
+    console.log('Bot polling started')
+  }, 5000)
   bot.startPolling()
 }
 export default bot
