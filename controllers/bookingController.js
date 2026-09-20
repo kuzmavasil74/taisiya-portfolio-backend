@@ -1,15 +1,26 @@
 import mongoose from 'mongoose'
 import Booking from '../models/Booking.js'
 import BookedSlot from '../models/BookedSlot.js'
+import Waitlist from '../models/Waitlist.js'
+import User from '../models/User.js'
 import { DateTime, Interval } from 'luxon'
-import { sendBookingNotification } from '../telegramBot.js'
+import {
+  sendBookingNotification,
+  notifyWaitlistForDate,
+} from '../telegramBot.js'
 
 const SLOT_INTERVAL = 30 // хвилини
+const BUFFER_MINUTES = 15 // час на прибирання/підготовку між записами
+const POINTS_PER_CZK = 100 // 1 бал лояльності за кожні 100 CZK
 
-// Список дат-меж 30-хвилинних слотів, які займає бронювання цієї тривалості.
+// Список дат-меж 30-хвилинних слотів, які займає бронювання цієї тривалості
+// (включно з буферним часом після послуги, округленим до слоту).
 const getOccupiedSlots = (start, durationMinutes) => {
+  const totalMinutes =
+    Math.ceil((durationMinutes + BUFFER_MINUTES) / SLOT_INTERVAL) *
+    SLOT_INTERVAL
   const slots = []
-  for (let m = 0; m < durationMinutes; m += SLOT_INTERVAL) {
+  for (let m = 0; m < totalMinutes; m += SLOT_INTERVAL) {
     slots.push(new Date(start.getTime() + m * 60000))
   }
   return slots
@@ -30,6 +41,9 @@ const SERVICE_DURATIONS = {
   curlingShort: 120,
   curlingMedium: 150,
   curlingLong: 180,
+  // Пакетні пропозиції (комбо зі знижкою)
+  cutAndToning: 120,
+  balayageAndToning: 240,
 }
 
 const SERVICE_PRICES = {
@@ -47,7 +61,12 @@ const SERVICE_PRICES = {
   curlingShort: 2100,
   curlingMedium: 2200,
   curlingLong: 2400,
+  // Пакетні пропозиції (комбо зі знижкою відносно суми окремих послуг)
+  cutAndToning: 1400, // womenHaircut (600) + toning (1000) окремо = 1600
+  balayageAndToning: 3400, // balayage (2800) + toning (1000) окремо = 3800
 }
+
+const PACKAGE_KEYS = ['cutAndToning', 'balayageAndToning']
 
 // GET SERVICES (єдине джерело правди для тривалості/ціни послуг)
 export const getServices = async (req, res) => {
@@ -55,6 +74,7 @@ export const getServices = async (req, res) => {
     key,
     duration: SERVICE_DURATIONS[key],
     price: SERVICE_PRICES[key] || 0,
+    isPackage: PACKAGE_KEYS.includes(key),
   }))
   res.json(services)
 }
@@ -62,7 +82,8 @@ export const getServices = async (req, res) => {
 // CREATE BOOKING
 export const createBooking = async (req, res) => {
   try {
-    const { name, phone, telegram, service, date, duration } = req.body
+    const { name, phone, telegram, service, date, duration, recurringGroupId } =
+      req.body
 
     if (!name || !phone || !service || !date || !duration) {
       return res
@@ -98,6 +119,7 @@ export const createBooking = async (req, res) => {
               duration,
               price: SERVICE_PRICES[service] || 0,
               userId: req.user?.id || null,
+              recurringGroupId: recurringGroupId || null,
             },
           ],
           { session }
@@ -120,7 +142,44 @@ export const createBooking = async (req, res) => {
     }
 
     sendBookingNotification(booking)
+
+    // Бали лояльності — тільки для зареєстрованих клієнтів
+    if (req.user?.id) {
+      const earnedPoints = Math.floor(booking.price / POINTS_PER_CZK)
+      if (earnedPoints > 0) {
+        User.findByIdAndUpdate(req.user.id, {
+          $inc: { points: earnedPoints },
+        }).catch((err) => console.error('Failed to award points:', err))
+      }
+    }
+
     return res.status(201).json(booking)
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ message: 'Server error' })
+  }
+}
+
+// JOIN WAITLIST — коли на потрібну дату немає вільних слотів
+export const joinWaitlist = async (req, res) => {
+  try {
+    const { name, phone, telegram, service, date } = req.body
+    if (!name || !phone || !service || !date) {
+      return res
+        .status(400)
+        .json({ message: 'All required fields must be filled' })
+    }
+
+    const entry = await Waitlist.create({
+      name,
+      phone,
+      telegram,
+      service,
+      date: new Date(date),
+      userId: req.user?.id || null,
+    })
+
+    return res.status(201).json(entry)
   } catch (err) {
     console.error(err)
     return res.status(500).json({ message: 'Server error' })
@@ -198,6 +257,7 @@ export const updateBooking = async (req, res) => {
 
     if (status === 'canceled') {
       await BookedSlot.deleteMany({ booking: booking._id })
+      notifyWaitlistForDate(booking.date)
     }
 
     return res.status(200).json(booking)
@@ -222,6 +282,7 @@ export const deleteBooking = async (req, res) => {
 
     await Booking.findByIdAndDelete(req.params.id)
     await BookedSlot.deleteMany({ booking: booking._id })
+    notifyWaitlistForDate(booking.date)
     return res.status(200).json({ message: 'Booking deleted' })
   } catch (err) {
     console.error(err)
@@ -306,7 +367,7 @@ export const getAvailableSlots = async (req, res) => {
         // Перевірка на конфлікт з існуючими бронюваннями
         const conflict = bookings.some((b) => {
           const bStart = DateTime.fromJSDate(new Date(b.date), { zone: tz })
-          const bEnd = bStart.plus({ minutes: b.duration })
+          const bEnd = bStart.plus({ minutes: b.duration + BUFFER_MINUTES })
           return Interval.fromDateTimes(slotStart, slotEnd).overlaps(
             Interval.fromDateTimes(bStart, bEnd)
           )

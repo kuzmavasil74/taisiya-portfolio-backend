@@ -1,4 +1,5 @@
 import User from '../models/User.js'
+import Booking from '../models/Booking.js'
 import bcrypt from 'bcryptjs'
 // GET /users/me — профіль поточного авторизованого юзера
 export const getMe = async (req, res) => {
@@ -10,6 +11,21 @@ export const getMe = async (req, res) => {
     return res.status(500).json({ message: 'Server error' })
   }
 }
+// DELETE /users/me — самостійне видалення власного акаунту (GDPR)
+export const deleteMe = async (req, res) => {
+  try {
+    // Бронювання лишаються для бухгалтерського обліку, але знеособлюються
+    await Booking.updateMany(
+      { userId: req.user.id },
+      { $set: { name: 'Deleted user', phone: '', telegram: null, userId: null } }
+    )
+    await User.findByIdAndDelete(req.user.id)
+    return res.status(200).json({ message: 'Account deleted' })
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error' })
+  }
+}
+
 export const createUser = async (req, res) => {
   try {
     const { name, email, password } = req.body

@@ -97,7 +97,49 @@ async function checkReminders() {
   }
 }
 
+// --- Запит на відгук через 2 години після завершення візиту ---
+async function checkReviewRequests() {
+  const now = new Date()
+
+  try {
+    const bookings = await Booking.find({
+      status: 'confirmed',
+      reviewRequestSent: false,
+    })
+
+    for (const booking of bookings) {
+      if (!booking.telegramId) continue
+
+      const endTime = new Date(
+        booking.date.getTime() + (booking.duration + 120) * 60000
+      )
+      if (now < endTime) continue
+
+      try {
+        await bot.sendMessage(
+          booking.telegramId,
+          `Дякуємо, що завітали до нас! ✨\nБудемо вдячні за відгук на сайті: https://www.taisiiastyle.cz/feedback`
+        )
+      } catch (err) {
+        console.error(
+          `Cannot send review request to ${booking.telegramId}:`,
+          err.message
+        )
+      } finally {
+        // позначаємо як надіслане в будь-якому разі, щоб не намагатись
+        // писати в один і той самий чат безкінечно при постійній помилці
+        booking.reviewRequestSent = true
+        await booking.save()
+      }
+    }
+  } catch (error) {
+    console.error('Error checking review requests:', error)
+  }
+}
+
 // --- Запуск перевірки ---
 setInterval(checkReminders, CHECK_INTERVAL)
+setInterval(checkReviewRequests, CHECK_INTERVAL)
 checkReminders()
+checkReviewRequests()
 console.log('Reminder service started, bot is polling...')

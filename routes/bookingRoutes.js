@@ -4,6 +4,7 @@ import {
   getAvailableSlots,
   getBookingPaginated,
   getServices,
+  joinWaitlist,
 } from '../controllers/bookingController.js'
 import { getBooking } from '../controllers/bookingController.js'
 import { getBookingById } from '../controllers/bookingController.js'
@@ -20,6 +21,7 @@ router.post('/', validate(bookingSchema), createBooking)
 router.get('/all', auth, getBooking)
 router.get('/available-slots', getAvailableSlots)
 router.get('/services', getServices)
+router.post('/waitlist', validate(bookingSchema), joinWaitlist)
 router.get('/', auth, requireRole('admin'), getBookingPaginated)
 router.get('/:id', auth, validateObjectId('id'), getBookingById)
 router.put(

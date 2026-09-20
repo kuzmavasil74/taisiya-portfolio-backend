@@ -1,7 +1,9 @@
 import TelegramBot from 'node-telegram-bot-api'
 import dotenv from 'dotenv'
+import { DateTime } from 'luxon'
 import Booking from './models/Booking.js'
 import BookedSlot from './models/BookedSlot.js'
+import Waitlist from './models/Waitlist.js'
 
 dotenv.config()
 
@@ -45,6 +47,46 @@ export function sendBookingNotification(booking) {
     .sendMessage(process.env.TELEGRAM_CHAT_ID, text, keyboard)
     .then(() => console.log('Повідомлення успішно відправлено!'))
     .catch((err) => console.error('Помилка при відправці повідомлення:', err))
+}
+
+// --- Сповіщення адміну, що клієнт зі списку очікування може зайняти
+//     звільнений день ---
+function notifyWaitlistEntry(entry) {
+  const text =
+    `📋 Звільнився день у списку очікування!\n` +
+    `Ім'я: ${entry.name}\n` +
+    `Телефон: ${entry.phone}\n` +
+    `Послуга: ${entry.service}\n` +
+    `Бажана дата: ${new Date(entry.date).toLocaleDateString('uk-UA')}`
+
+  bot
+    .sendMessage(process.env.TELEGRAM_CHAT_ID, text)
+    .catch((err) =>
+      console.error('Помилка сповіщення списку очікування:', err)
+    )
+}
+
+// --- Перевіряє список очікування на конкретний день і сповіщає адміна ---
+export async function notifyWaitlistForDate(date) {
+  try {
+    const tz = 'Europe/Prague'
+    const day = DateTime.fromJSDate(new Date(date), { zone: tz })
+    const dayStart = day.startOf('day').toJSDate()
+    const dayEnd = day.endOf('day').toJSDate()
+
+    const entries = await Waitlist.find({
+      date: { $gte: dayStart, $lte: dayEnd },
+      notified: false,
+    })
+
+    for (const entry of entries) {
+      notifyWaitlistEntry(entry)
+      entry.notified = true
+      await entry.save()
+    }
+  } catch (err) {
+    console.error('Failed to notify waitlist:', err)
+  }
 }
 
 // --- Підписка на нагадування через /start <bookingId> ---
@@ -112,6 +154,7 @@ bot.on('callback_query', async (query) => {
 
   if (action === 'cancel') {
     await BookedSlot.deleteMany({ booking: booking._id })
+    notifyWaitlistForDate(booking.date)
   }
 
   // очищаємо клавіатуру після натискання

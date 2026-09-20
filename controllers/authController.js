@@ -5,9 +5,11 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 // register user
+const REFERRAL_BONUS_POINTS = 50
+
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body
+    const { name, email, password, referralCode, marketingConsent } = req.body
     const role = 'user'
     if (!name || !email || !password) {
       return res
@@ -19,6 +21,11 @@ export const register = async (req, res) => {
     if (existing)
       return res.status(409).json({ message: 'User already exists' })
 
+    let referrer = null
+    if (referralCode) {
+      referrer = await User.findOne({ referralCode: referralCode.trim() })
+    }
+
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
@@ -27,7 +34,15 @@ export const register = async (req, res) => {
       email,
       password: hashedPassword,
       role,
+      marketingConsent: Boolean(marketingConsent),
+      referredBy: referrer ? referrer._id : null,
+      points: referrer ? REFERRAL_BONUS_POINTS : 0,
     })
+
+    if (referrer) {
+      referrer.points += REFERRAL_BONUS_POINTS
+      await referrer.save()
+    }
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,

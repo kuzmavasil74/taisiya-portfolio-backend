@@ -7,6 +7,7 @@ import userRoutes from './routes/userRoutes.js'
 import bookingRoutes from './routes/bookingRoutes.js'
 import authRoutes from './routes/authRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
+import feedbackRoutes from './routes/feedbackRoutes.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import './config/db.js'
 
@@ -36,6 +37,7 @@ app.use('/auth', authRoutes)
 app.use('/users', userRoutes)
 app.use('/bookings', bookingRoutes)
 app.use('/admin', adminRoutes)
+app.use('/feedback', feedbackRoutes)
 app.use(errorHandler)
 
 const PORT = process.env.PORT || 4000

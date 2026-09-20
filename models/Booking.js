@@ -21,6 +21,8 @@ const bookingSchema = new mongoose.Schema(
     telegramId: { type: Number, required: false },
     reminderDaySent: { type: Boolean, default: false },
     reminderHourSent: { type: Boolean, default: false },
+    reviewRequestSent: { type: Boolean, default: false },
+    recurringGroupId: { type: String, default: null },
   },
   { timestamps: true }
 )

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import crypto from 'crypto'
 
 const userSchema = new mongoose.Schema(
   {
@@ -17,8 +18,23 @@ const userSchema = new mongoose.Schema(
       ref: 'User',
       required: false,
     },
+    points: { type: Number, default: 0 },
+    referralCode: { type: String, unique: true, sparse: true },
+    referredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    marketingConsent: { type: Boolean, default: false },
   },
   { timestamps: true }
 )
+
+userSchema.pre('save', function (next) {
+  if (!this.referralCode) {
+    this.referralCode = crypto.randomBytes(4).toString('hex')
+  }
+  next()
+})
 
 export default mongoose.model('User', userSchema)
