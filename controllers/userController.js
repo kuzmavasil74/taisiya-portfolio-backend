@@ -1,4 +1,5 @@
 import User from '../models/User.js'
+import bcrypt from 'bcryptjs'
 // GET /users/me — профіль поточного авторизованого юзера
 export const getMe = async (req, res) => {
   try {
@@ -18,7 +19,8 @@ export const createUser = async (req, res) => {
         .json({ message: 'name, email, password — required' })
     }
 
-    const user = await User.create({ name, email, password })
+    const hashedPassword = await bcrypt.hash(password, await bcrypt.genSalt(10))
+    const user = await User.create({ name, email, password: hashedPassword })
 
     return res.status(201).json({
       id: user._id,
@@ -91,7 +93,7 @@ export const updateUser = async (req, res) => {
       user.email = email
     }
     if (password) {
-      user.password = password
+      user.password = await bcrypt.hash(password, await bcrypt.genSalt(10))
     }
     await user.save()
     return res.status(200).json(user)

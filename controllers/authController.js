@@ -8,7 +8,7 @@ dotenv.config()
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body
-    const role = req.body.role || 'user'
+    const role = 'user'
     if (!name || !email || !password) {
       return res
         .status(400)

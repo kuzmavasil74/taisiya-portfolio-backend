@@ -16,7 +16,7 @@ const router = express.Router()
 router.post('/', auth, requireRole('admin'), validate(userSchema), createUser)
 router.get('/', auth, requireRole('admin'), getUsers)
 router.get('/me', auth, getMe)
-router.get('/:id', validateObjectId('id'), getUsersById)
+router.get('/:id', auth, validateObjectId('id'), getUsersById)
 router.put(
   '/:id',
   auth,

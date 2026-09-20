@@ -1,10 +1,19 @@
 import mongoose from 'mongoose'
 import Booking from '../models/Booking.js'
+import BookedSlot from '../models/BookedSlot.js'
 import { DateTime, Interval } from 'luxon'
 import { sendBookingNotification } from '../telegramBot.js'
-const WORK_START = 9
-const WORK_END = 24
-const SLOT_INTERVAL = 30
+
+const SLOT_INTERVAL = 30 // хвилини
+
+// Список дат-меж 30-хвилинних слотів, які займає бронювання цієї тривалості.
+const getOccupiedSlots = (start, durationMinutes) => {
+  const slots = []
+  for (let m = 0; m < durationMinutes; m += SLOT_INTERVAL) {
+    slots.push(new Date(start.getTime() + m * 60000))
+  }
+  return slots
+}
 
 const SERVICE_DURATIONS = {
   womenHaircut: 60,
@@ -40,6 +49,16 @@ const SERVICE_PRICES = {
   curlingLong: 2400,
 }
 
+// GET SERVICES (єдине джерело правди для тривалості/ціни послуг)
+export const getServices = async (req, res) => {
+  const services = Object.keys(SERVICE_DURATIONS).map((key) => ({
+    key,
+    duration: SERVICE_DURATIONS[key],
+    price: SERVICE_PRICES[key] || 0,
+  }))
+  res.json(services)
+}
+
 // CREATE BOOKING
 export const createBooking = async (req, res) => {
   try {
@@ -51,35 +70,55 @@ export const createBooking = async (req, res) => {
         .json({ message: 'All required fields must be filled' })
     }
 
-    const bookingStart = new Date(date)
-    const bookingEnd = new Date(bookingStart.getTime() + duration * 60000)
-
-    // Перевірка накладки
-    const existing = await Booking.find({
-      service,
-      date: { $lt: bookingEnd },
-    })
-
-    const conflict = existing.some((b) => {
-      const bStart = new Date(b.date)
-      const bEnd = new Date(bStart.getTime() + b.duration * 60000)
-      return bookingStart < bEnd && bookingEnd > bStart
-    })
-
-    if (conflict) {
-      return res.status(400).json({ message: 'This slot is already booked' })
+    if (
+      !SERVICE_DURATIONS[service] ||
+      Number(duration) !== SERVICE_DURATIONS[service]
+    ) {
+      return res.status(400).json({ message: 'Invalid service or duration' })
     }
 
-    const booking = await Booking.create({
-      name,
-      phone,
-      telegram,
-      service,
-      date: bookingStart,
-      duration,
-      price: SERVICE_PRICES[service] || 0,
-      userId: req.user?.id || null,
-    })
+    const bookingStart = new Date(date)
+    const occupiedSlots = getOccupiedSlots(bookingStart, Number(duration))
+
+    // Атомарне резервування слотів: унікальний індекс на BookedSlot.slot
+    // гарантує, що навіть два одночасні запити не зможуть зайняти той самий
+    // слот — другий отримає помилку дублікату ключа й відкотиться.
+    const session = await mongoose.startSession()
+    let booking
+    try {
+      await session.withTransaction(async () => {
+        const [created] = await Booking.create(
+          [
+            {
+              name,
+              phone,
+              telegram,
+              service,
+              date: bookingStart,
+              duration,
+              price: SERVICE_PRICES[service] || 0,
+              userId: req.user?.id || null,
+            },
+          ],
+          { session }
+        )
+
+        await BookedSlot.insertMany(
+          occupiedSlots.map((slot) => ({ slot, booking: created._id })),
+          { session, ordered: true }
+        )
+
+        booking = created
+      })
+    } catch (err) {
+      if (err.code === 11000) {
+        return res.status(409).json({ message: 'This slot is already booked' })
+      }
+      throw err
+    } finally {
+      await session.endSession()
+    }
+
     sendBookingNotification(booking)
     return res.status(201).json(booking)
   } catch (err) {
@@ -114,7 +153,7 @@ export const getBookingById = async (req, res) => {
 
     if (
       req.user.role !== 'admin' &&
-      booking.userId.toString() !== req.user.id
+      (!booking.userId || booking.userId.toString() !== req.user.id)
     ) {
       return res.status(403).json({ message: 'Forbidden' })
     }
@@ -128,17 +167,10 @@ export const getBookingById = async (req, res) => {
 
 // UPDATE BOOKING
 export const updateBooking = async (req, res) => {
-  console.log('=== UPDATE BOOKING ===')
-  console.log('Params ID:', req.params.id)
-  console.log('Request body:', req.body)
-  console.log('User from token:', req.user)
-
   try {
     const booking = await Booking.findById(req.params.id)
-    console.log('Booking found:', booking)
 
     if (!booking) {
-      console.log('Booking not found:', req.params.id)
       return res.status(404).json({ message: 'Booking not found' })
     }
 
@@ -148,7 +180,6 @@ export const updateBooking = async (req, res) => {
       booking.userId && // якщо є userId
       booking.userId.toString() !== req.user.id
     ) {
-      console.log('Forbidden access for user:', req.user.id)
       return res.status(403).json({ message: 'Forbidden' })
     }
 
@@ -163,10 +194,11 @@ export const updateBooking = async (req, res) => {
       booking.status = status
     }
 
-    console.log('Booking before save:', booking)
-
     await booking.save()
-    console.log('Booking updated successfully:', booking._id, booking.status)
+
+    if (status === 'canceled') {
+      await BookedSlot.deleteMany({ booking: booking._id })
+    }
 
     return res.status(200).json(booking)
   } catch (err) {
@@ -183,12 +215,13 @@ export const deleteBooking = async (req, res) => {
 
     if (
       req.user.role !== 'admin' &&
-      booking.userId.toString() !== req.user.id
+      (!booking.userId || booking.userId.toString() !== req.user.id)
     ) {
       return res.status(403).json({ message: 'Forbidden' })
     }
 
     await Booking.findByIdAndDelete(req.params.id)
+    await BookedSlot.deleteMany({ booking: booking._id })
     return res.status(200).json({ message: 'Booking deleted' })
   } catch (err) {
     console.error(err)
@@ -260,6 +293,7 @@ export const getAvailableSlots = async (req, res) => {
 
     const bookings = await Booking.find({
       date: { $gte: dayStart, $lte: dayEnd },
+      status: { $ne: 'canceled' },
     })
 
     const slots = []

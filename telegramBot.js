@@ -1,6 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api'
 import dotenv from 'dotenv'
 import Booking from './models/Booking.js'
+import BookedSlot from './models/BookedSlot.js'
 
 dotenv.config()
 
@@ -50,20 +51,27 @@ export function sendBookingNotification(booking) {
 bot.onText(/\/start (.+)/, async (msg, match) => {
   const bookingId = match[1]
   const telegramId = msg.from.id // це число
-  console.log('Підписка на нагадування:', bookingId, telegramId)
 
   try {
-    // оновлюємо telegramId у бронюванні
-    const booking = await Booking.findByIdAndUpdate(
-      bookingId,
-      { telegramId: telegramId },
-      { new: true }
-    )
+    const booking = await Booking.findById(bookingId)
 
     if (!booking) {
       await bot.sendMessage(telegramId, `❌ Не вдалося знайти бронювання.`)
       return
     }
+
+    // Якщо на це бронювання вже підписаний інший Telegram-акаунт —
+    // не даємо перехопити чужі нагадування.
+    if (booking.telegramId && booking.telegramId !== telegramId) {
+      await bot.sendMessage(
+        telegramId,
+        `❌ Це бронювання вже прив'язане до іншого акаунту Telegram.`
+      )
+      return
+    }
+
+    booking.telegramId = telegramId
+    await booking.save()
 
     // підтвердження підписки
     await bot.sendMessage(
@@ -101,6 +109,10 @@ bot.on('callback_query', async (query) => {
   if (action === 'cancel') booking.status = 'canceled'
 
   await booking.save()
+
+  if (action === 'cancel') {
+    await BookedSlot.deleteMany({ booking: booking._id })
+  }
 
   // очищаємо клавіатуру після натискання
   await bot.editMessageReplyMarkup(

@@ -3,6 +3,7 @@ import {
   createBooking,
   getAvailableSlots,
   getBookingPaginated,
+  getServices,
 } from '../controllers/bookingController.js'
 import { getBooking } from '../controllers/bookingController.js'
 import { getBookingById } from '../controllers/bookingController.js'
@@ -18,18 +19,12 @@ const router = express.Router()
 router.post('/', validate(bookingSchema), createBooking)
 router.get('/all', auth, getBooking)
 router.get('/available-slots', getAvailableSlots)
+router.get('/services', getServices)
 router.get('/', auth, requireRole('admin'), getBookingPaginated)
 router.get('/:id', auth, validateObjectId('id'), getBookingById)
 router.put(
   '/:id',
   auth,
-  (req, res, next) => {
-    console.log('AFTER AUTH, BEFORE ObjectId Validate')
-    console.log('Params:', req.params) // має показати { id: '695f847eef19ae7fc0ce04d5' }
-    console.log('Body:', req.body) // має показати { status: 'confirmed' }
-    console.log('User:', req.user) // має показати дані користувача з токену
-    next()
-  },
   validateObjectId('id'),
   validate(bookingUpdateSchema),
   updateBooking
