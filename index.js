@@ -14,6 +14,8 @@ import './config/db.js'
 dotenv.config()
 
 const app = express()
+// Render стоїть за проксі — потрібно для коректного IP у rate limiter
+app.set('trust proxy', 1)
 // CORS middleware
 app.use(
   cors({

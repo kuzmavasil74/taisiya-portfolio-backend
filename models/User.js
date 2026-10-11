@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    referralRewarded: { type: Boolean, default: false }, // бонус за запрошення вже нараховано
     marketingConsent: { type: Boolean, default: false },
   },
   { timestamps: true }

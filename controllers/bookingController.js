@@ -5,13 +5,51 @@ import Waitlist from '../models/Waitlist.js'
 import User from '../models/User.js'
 import { DateTime, Interval } from 'luxon'
 import {
+  TIMEZONE,
+  SLOT_INTERVAL,
+  BUFFER_MINUTES,
+  OPEN_HOUR,
+  CLOSE_HOUR,
+  WORKING_WEEKDAYS,
+  validateBookingTime,
+} from '../utils/schedule.js'
+import {
   sendBookingNotification,
   notifyWaitlistForDate,
 } from '../telegramBot.js'
 
-const SLOT_INTERVAL = 30 // хвилини
-const BUFFER_MINUTES = 15 // час на прибирання/підготовку між записами
 const POINTS_PER_CZK = 100 // 1 бал лояльності за кожні 100 CZK
+const REFERRAL_BONUS_POINTS = 50 // нараховується обом після першого запису запрошеного
+
+// Зменшує бали, не опускаючи нижче нуля
+const deductPoints = (userId, amount) =>
+  User.updateOne({ _id: userId }, [
+    { $set: { points: { $max: [0, { $subtract: ['$points', amount] }] } } },
+  ])
+
+// Забирає раніше нараховані за запис бали (лише один раз)
+const revokeBookingPoints = async (bookingId) => {
+  const prev = await Booking.findOneAndUpdate(
+    { _id: bookingId, pointsAwarded: { $gt: 0 } },
+    { pointsAwarded: 0 }
+  )
+  if (prev && prev.userId) await deductPoints(prev.userId, prev.pointsAwarded)
+}
+
+// Реферальний бонус: нараховується обом лише після першого запису запрошеного,
+// а не за саму реєстрацію — інакше його можна фармити фейковими акаунтами.
+const rewardReferral = async (userId) => {
+  const invitee = await User.findOneAndUpdate(
+    { _id: userId, referredBy: { $ne: null }, referralRewarded: false },
+    { referralRewarded: true, $inc: { points: REFERRAL_BONUS_POINTS } }
+  )
+  if (invitee) {
+    await User.updateOne(
+      { _id: invitee.referredBy },
+      { $inc: { points: REFERRAL_BONUS_POINTS } }
+    )
+  }
+}
 
 // Список дат-меж 30-хвилинних слотів, які займає бронювання цієї тривалості
 // (включно з буферним часом після послуги, округленим до слоту).
@@ -99,6 +137,9 @@ export const createBooking = async (req, res) => {
     }
 
     const bookingStart = new Date(date)
+    const timeError = validateBookingTime(bookingStart, Number(duration))
+    if (timeError) return res.status(400).json({ message: timeError })
+
     const occupiedSlots = getOccupiedSlots(bookingStart, Number(duration))
 
     // Атомарне резервування слотів: унікальний індекс на BookedSlot.slot
@@ -146,11 +187,19 @@ export const createBooking = async (req, res) => {
     // Бали лояльності — тільки для зареєстрованих клієнтів
     if (req.user?.id) {
       const earnedPoints = Math.floor(booking.price / POINTS_PER_CZK)
-      if (earnedPoints > 0) {
-        User.findByIdAndUpdate(req.user.id, {
-          $inc: { points: earnedPoints },
-        }).catch((err) => console.error('Failed to award points:', err))
-      }
+      Promise.all([
+        earnedPoints > 0
+          ? Promise.all([
+              User.findByIdAndUpdate(req.user.id, {
+                $inc: { points: earnedPoints },
+              }),
+              Booking.findByIdAndUpdate(booking._id, {
+                pointsAwarded: earnedPoints,
+              }),
+            ])
+          : null,
+        rewardReferral(req.user.id),
+      ]).catch((err) => console.error('Failed to award points:', err))
     }
 
     return res.status(201).json(booking)
@@ -168,6 +217,13 @@ export const joinWaitlist = async (req, res) => {
       return res
         .status(400)
         .json({ message: 'All required fields must be filled' })
+    }
+
+    if (!SERVICE_DURATIONS[service]) {
+      return res.status(400).json({ message: 'Invalid service' })
+    }
+    if (new Date(date) <= new Date()) {
+      return res.status(400).json({ message: 'Date must be in the future' })
     }
 
     const entry = await Waitlist.create({
@@ -224,6 +280,25 @@ export const getBookingById = async (req, res) => {
   }
 }
 
+// Переносить бронювання: звільняє старі слоти й атомарно займає нові
+const reserveSlots = async (booking, start, duration) => {
+  const session = await mongoose.startSession()
+  try {
+    await session.withTransaction(async () => {
+      await BookedSlot.deleteMany({ booking: booking._id }, { session })
+      await BookedSlot.insertMany(
+        getOccupiedSlots(start, duration).map((slot) => ({
+          slot,
+          booking: booking._id,
+        })),
+        { session, ordered: true }
+      )
+    })
+  } finally {
+    await session.endSession()
+  }
+}
+
 // UPDATE BOOKING
 export const updateBooking = async (req, res) => {
   try {
@@ -233,37 +308,77 @@ export const updateBooking = async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' })
     }
 
-    // Перевірка прав доступу
-    if (
-      req.user.role !== 'admin' &&
-      booking.userId && // якщо є userId
-      booking.userId.toString() !== req.user.id
-    ) {
+    const isAdmin = req.user.role === 'admin'
+
+    // Перевірка прав доступу: клієнт може змінювати лише власні записи
+    if (!isAdmin && (!booking.userId || booking.userId.toString() !== req.user.id)) {
       return res.status(403).json({ message: 'Forbidden' })
     }
 
     const { name, phone, telegram, service, date, status } = req.body
 
+    // Клієнт може лише скасувати запис; редагує й підтверджує тільки адмін
+    if (
+      !isAdmin &&
+      (name || phone || telegram || service || date || status !== 'canceled')
+    ) {
+      return res.status(403).json({ message: 'Forbidden' })
+    }
+
+    const wasCanceled = booking.status === 'canceled'
+    const nextStatus =
+      status && ['pending', 'confirmed', 'canceled'].includes(status)
+        ? status
+        : booking.status
+    const nextService = service || booking.service
+    const nextDate = date ? new Date(date) : booking.date
+
+    const scheduleChanged =
+      nextService !== booking.service ||
+      nextDate.getTime() !== new Date(booking.date).getTime()
+    const reactivated = wasCanceled && nextStatus !== 'canceled'
+
+    if (nextStatus !== 'canceled' && (scheduleChanged || reactivated)) {
+      if (!SERVICE_DURATIONS[nextService]) {
+        return res.status(400).json({ message: 'Invalid service' })
+      }
+      const nextDuration = SERVICE_DURATIONS[nextService]
+      const timeError = validateBookingTime(nextDate, nextDuration, {
+        allowPast: reactivated && !scheduleChanged,
+      })
+      if (timeError) return res.status(400).json({ message: timeError })
+
+      try {
+        await reserveSlots(booking, nextDate, nextDuration)
+      } catch (err) {
+        if (err.code === 11000) {
+          return res.status(409).json({ message: 'This slot is already booked' })
+        }
+        throw err
+      }
+      booking.service = nextService
+      booking.date = nextDate
+      booking.duration = nextDuration
+      booking.price = SERVICE_PRICES[nextService] || 0
+    }
+
     if (name) booking.name = name
     if (phone) booking.phone = phone
     if (telegram) booking.telegram = telegram
-    if (service) booking.service = service
-    if (date) booking.date = date
-    if (status && ['pending', 'confirmed', 'canceled'].includes(status)) {
-      booking.status = status
-    }
+    booking.status = nextStatus
 
     await booking.save()
 
-    if (status === 'canceled') {
+    if (nextStatus === 'canceled' && !wasCanceled) {
       await BookedSlot.deleteMany({ booking: booking._id })
+      await revokeBookingPoints(booking._id)
       notifyWaitlistForDate(booking.date)
     }
 
     return res.status(200).json(booking)
   } catch (err) {
     console.error('Server error in updateBooking:', err)
-    return res.status(500).json({ message: 'Server error', error: err.message })
+    return res.status(500).json({ message: 'Server error' })
   }
 }
 
@@ -280,6 +395,7 @@ export const deleteBooking = async (req, res) => {
       return res.status(403).json({ message: 'Forbidden' })
     }
 
+    await revokeBookingPoints(booking._id)
     await Booking.findByIdAndDelete(req.params.id)
     await BookedSlot.deleteMany({ booking: booking._id })
     notifyWaitlistForDate(booking.date)
@@ -289,6 +405,7 @@ export const deleteBooking = async (req, res) => {
     return res.status(500).json({ message: 'Server error' })
   }
 }
+
 // GET AVAILABLE SLOTS (simplified 30-min slots)
 export const getBookingPaginated = async (req, res) => {
   try {
@@ -297,7 +414,7 @@ export const getBookingPaginated = async (req, res) => {
     const skip = (page - 1) * limit
 
     // Локальна зона Прази
-    const tz = 'Europe/Prague'
+    const tz = TIMEZONE
     const now = DateTime.now().setZone(tz)
 
     // статус можна передавати: 'upcoming' або 'archive'
@@ -336,11 +453,11 @@ export const getBookingPaginated = async (req, res) => {
 // GET AVAILABLE SLOTS (30-min slots)
 export const getAvailableSlots = async (req, res) => {
   try {
-    const { date, startHour = 9, endHour = 20 } = req.query
+    const { date } = req.query
     if (!date) return res.status(400).json({ message: 'Date is required' })
 
     // Локальний час для Прази
-    const tz = 'Europe/Prague'
+    const tz = TIMEZONE
 
     // Поточний час у Празі
     const now = DateTime.now().setZone(tz)
@@ -359,7 +476,10 @@ export const getAvailableSlots = async (req, res) => {
 
     const slots = []
 
-    for (let hour = startHour; hour < endHour; hour++) {
+    // Вихідні дні — слотів немає
+    if (!WORKING_WEEKDAYS.includes(day.weekday)) return res.json([])
+
+    for (let hour = OPEN_HOUR; hour < CLOSE_HOUR; hour++) {
       for (let min = 0; min < 60; min += 30) {
         const slotStart = day.set({ hour, minute: min, second: 0 })
         const slotEnd = slotStart.plus({ minutes: 30 })

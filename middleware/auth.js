@@ -26,3 +26,21 @@ export const auth = (req, res, next) => {
     return res.status(401).json({ message: 'Invalid or expired token' })
   }
 }
+
+// Необов'язкова авторизація: гостьові запити проходять, а якщо токен валідний —
+// запис прив'язується до користувача (бали лояльності, "мої записи").
+export const optionalAuth = (req, res, next) => {
+  const header = req.headers.authorization
+  if (!header || !header.startsWith('Bearer ')) return next()
+  try {
+    const decoded = jwt.verify(header.split(' ')[1], process.env.JWT_SECRET)
+    req.user = {
+      id: decoded.id || decoded._id,
+      email: decoded.email,
+      role: decoded.role,
+    }
+  } catch {
+    // недійсний токен — трактуємо як гостя
+  }
+  next()
+}

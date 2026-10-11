@@ -5,7 +5,6 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 // register user
-const REFERRAL_BONUS_POINTS = 50
 
 export const register = async (req, res) => {
   try {
@@ -36,13 +35,8 @@ export const register = async (req, res) => {
       role,
       marketingConsent: Boolean(marketingConsent),
       referredBy: referrer ? referrer._id : null,
-      points: referrer ? REFERRAL_BONUS_POINTS : 0,
     })
 
-    if (referrer) {
-      referrer.points += REFERRAL_BONUS_POINTS
-      await referrer.save()
-    }
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,

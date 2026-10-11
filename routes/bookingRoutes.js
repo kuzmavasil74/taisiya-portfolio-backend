@@ -14,17 +14,37 @@ import { validate } from '../middleware/validate.js'
 import { bookingSchema } from '../validation/bookingValidator.js'
 import { bookingUpdateSchema } from '../validation/bookingValidator.js'
 import { validateObjectId } from '../middleware/validateObjectId.js'
-import { auth } from '../middleware/auth.js'
+import { auth, optionalAuth } from '../middleware/auth.js'
+import { bookingLimiter } from '../middleware/rateLimit.js'
 import { requireRole } from '../middleware/role.js'
 const router = express.Router()
-router.post('/', validate(bookingSchema), createBooking)
+router.post(
+  '/',
+  bookingLimiter,
+  optionalAuth,
+  validate(bookingSchema),
+  createBooking
+)
 router.get('/all', auth, getBooking)
 router.get('/available-slots', getAvailableSlots)
 router.get('/services', getServices)
-router.post('/waitlist', validate(bookingSchema), joinWaitlist)
+router.post(
+  '/waitlist',
+  bookingLimiter,
+  optionalAuth,
+  validate(bookingSchema),
+  joinWaitlist
+)
 router.get('/', auth, requireRole('admin'), getBookingPaginated)
 router.get('/:id', auth, validateObjectId('id'), getBookingById)
 router.put(
+  '/:id',
+  auth,
+  validateObjectId('id'),
+  validate(bookingUpdateSchema),
+  updateBooking
+)
+router.patch(
   '/:id',
   auth,
   validateObjectId('id'),

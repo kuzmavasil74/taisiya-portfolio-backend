@@ -6,12 +6,13 @@ import {
 } from '../controllers/feedbackController.js'
 import { auth } from '../middleware/auth.js'
 import { requireRole } from '../middleware/role.js'
+import { feedbackLimiter } from '../middleware/rateLimit.js'
 import { validateObjectId } from '../middleware/validateObjectId.js'
 
 const router = express.Router()
 
 router.get('/', getFeedback)
-router.post('/', auth, createFeedback)
+router.post('/', feedbackLimiter, auth, createFeedback)
 router.delete(
   '/:id',
   auth,
