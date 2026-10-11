@@ -21,8 +21,14 @@ app.use(
   cors({
     origin: [
       'https://www.taisiiastyle.cz',
+      'https://taisiiastyle.cz',
       'http://localhost:3000',
       'http://localhost:4000',
+      // додаткові origin через кому (наприклад, Railway-домен фронтенду)
+      ...(process.env.CORS_ORIGINS || '')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean),
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -32,6 +38,9 @@ app.use(
 // Body parser
 app.use(express.json())
 app.use(morgan('dev'))
+// Healthcheck для хостингу (без звернення до БД)
+app.get('/health', (req, res) => res.json({ status: 'ok' }))
+
 // Public route
 app.use('/auth', authRoutes)
 
