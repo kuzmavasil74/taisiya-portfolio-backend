@@ -164,11 +164,10 @@ bot.on('callback_query', async (query) => {
   )
   await bot.answerCallbackQuery(query.id, { text: `Натиснуто: ${action}` })
 })
+// Polling має бути запущений рівно один раз і лише в одному екземплярі —
+// інакше Telegram повертає 409 Conflict (getUpdates скасовують один одного).
 if (process.env.ENABLE_BOT_POLLING === 'true') {
-  setTimeout(() => {
-    bot.startPolling()
-    console.log('Bot polling started')
-  }, 5000)
   bot.startPolling()
+  console.log('Bot polling started')
 }
 export default bot
