@@ -9,7 +9,7 @@ Express + MongoDB API for the booking site (https://www.taisiiastyle.cz) and the
 | `backend` | `node index.js` | healthcheck `/health`, `ENABLE_BOT_POLLING=true` (the only instance that polls Telegram) |
 | `reminder-worker` | `node reminderService.js` | day/hour reminders and review requests, no polling |
 
-Both services deploy automatically on push to `main`.
+Both services deploy automatically on push to `main` (source: `kuzmavasil74/taisiya-portfolio-backend`).
 
 ### Environment variables
 
