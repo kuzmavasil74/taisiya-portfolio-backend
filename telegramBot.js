@@ -4,6 +4,7 @@ import { DateTime } from 'luxon'
 import Booking from './models/Booking.js'
 import BookedSlot from './models/BookedSlot.js'
 import Waitlist from './models/Waitlist.js'
+import { serviceLabel } from './utils/serviceLabels.js'
 
 dotenv.config()
 
@@ -30,7 +31,7 @@ export function sendBookingNotification(booking) {
     `Нове бронювання!\n` +
     `Ім’я: ${booking.name}\n` +
     `Телефон: ${booking.phone}\n` +
-    `Послуга: ${booking.service}\n` +
+    `Послуга: ${serviceLabel(booking.service)}\n` +
     `Дата: ${formattedDate}`
 
   const keyboard = {
@@ -57,7 +58,7 @@ function notifyWaitlistEntry(entry) {
     `📋 Звільнився день у списку очікування!\n` +
     `Ім'я: ${entry.name}\n` +
     `Телефон: ${entry.phone}\n` +
-    `Послуга: ${entry.service}\n` +
+    `Послуга: ${serviceLabel(entry.service)}\n` +
     `Бажана дата: ${new Date(entry.date).toLocaleDateString('uk-UA', {
       timeZone: 'Europe/Prague',
     })}`
@@ -121,7 +122,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     // підтвердження підписки
     await bot.sendMessage(
       telegramId,
-      `✅ Ви підписані на нагадування для бронювання "${booking.service}"!`
+      `✅ Ви підписані на нагадування для бронювання "${serviceLabel(booking.service)}"!`
     )
   } catch (err) {
     console.error(err)

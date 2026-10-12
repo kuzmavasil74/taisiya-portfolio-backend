@@ -2,6 +2,7 @@ import Booking from './models/Booking.js'
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import bot from './telegramBot.js'
+import { serviceLabel } from './utils/serviceLabels.js'
 dotenv.config()
 
 mongoose
@@ -62,7 +63,7 @@ async function checkReminders() {
         try {
           await bot.sendMessage(
             booking.telegramId,
-            `Нагадування ✨\nУ вас запис до перукаря завтра\n🕒 ${meetingTimeStr}\n💇‍♀️ Послуга: ${booking.service}\nДо зустрічі!`,
+            `Нагадування ✨\nУ вас запис до перукаря завтра\n🕒 ${meetingTimeStr}\n💇‍♀️ Послуга: ${serviceLabel(booking.service)}\nДо зустрічі!`,
             keyboard
           )
           booking.reminderDaySent = true
@@ -80,7 +81,7 @@ async function checkReminders() {
         try {
           await bot.sendMessage(
             booking.telegramId,
-            `Нагадування ⏰\nЧерез годину у вас запис\n🕒 ${meetingTimeStr}\n💇‍♀️ Послуга: ${booking.service}`,
+            `Нагадування ⏰\nЧерез годину у вас запис\n🕒 ${meetingTimeStr}\n💇‍♀️ Послуга: ${serviceLabel(booking.service)}`,
             keyboard
           )
           booking.reminderHourSent = true
