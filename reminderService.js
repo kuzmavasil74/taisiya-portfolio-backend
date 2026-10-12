@@ -32,9 +32,10 @@ async function checkReminders() {
       if (!booking.telegramId) continue
 
       const meetingTime = new Date(booking.date)
-      const meetingTimeStr = meetingTime.toLocaleTimeString([], {
+      const meetingTimeStr = meetingTime.toLocaleTimeString('uk-UA', {
         hour: '2-digit',
         minute: '2-digit',
+        hour12: false,
         timeZone: 'Europe/Prague',
       })
 

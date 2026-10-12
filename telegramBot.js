@@ -22,6 +22,7 @@ export function sendBookingNotification(booking) {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
+      timeZone: 'Europe/Prague',
     })
     .replace(',', ' о')
 
@@ -57,7 +58,9 @@ function notifyWaitlistEntry(entry) {
     `Ім'я: ${entry.name}\n` +
     `Телефон: ${entry.phone}\n` +
     `Послуга: ${entry.service}\n` +
-    `Бажана дата: ${new Date(entry.date).toLocaleDateString('uk-UA')}`
+    `Бажана дата: ${new Date(entry.date).toLocaleDateString('uk-UA', {
+      timeZone: 'Europe/Prague',
+    })}`
 
   bot
     .sendMessage(process.env.TELEGRAM_CHAT_ID, text)
